@@ -3,10 +3,6 @@ package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.model
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConverted;
-import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.models.convertors.LocalDateConverter;
-
-import java.time.LocalDate;
 
 @DynamoDBTable(tableName = "movie_infos")
 public final class MovieInfo {
@@ -22,12 +18,11 @@ public final class MovieInfo {
     private String countryOfOrigin;
 
     @DynamoDBAttribute(attributeName = "release_date")
-    @DynamoDBTypeConverted(converter = LocalDateConverter.class)
-    private LocalDate releaseDate;
+    private String releaseDate;
 
     public MovieInfo() { }
 
-    public MovieInfo(String movieId, String name, String countryOfOrigin, LocalDate releaseDate) {
+    public MovieInfo(String movieId, String name, String countryOfOrigin, String releaseDate) {
         this.movieId = movieId;
         this.name = name;
         this.countryOfOrigin = countryOfOrigin;
@@ -46,7 +41,7 @@ public final class MovieInfo {
         return countryOfOrigin;
     }
 
-    public LocalDate getReleaseDate() {
+    public String getReleaseDate() {
         return releaseDate;
     }
 
@@ -62,7 +57,7 @@ public final class MovieInfo {
         this.countryOfOrigin = countryOfOrigin;
     }
 
-    public void setReleaseDate(final LocalDate releaseDate) {
+    public void setReleaseDate(final String releaseDate) {
         this.releaseDate = releaseDate;
     }
 }

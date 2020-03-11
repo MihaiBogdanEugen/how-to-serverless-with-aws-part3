@@ -1,13 +1,11 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie.repository.models;
 
-import java.time.LocalDate;
-
 public final class Movie {
 
     private String movieId;
     private String name;
     private String countryOfOrigin;
-    private LocalDate releaseDate;
+    private String releaseDate;
     private Integer rottenTomatoesRating;
     private Integer imdbRating;
 
@@ -25,7 +23,7 @@ public final class Movie {
         return countryOfOrigin;
     }
 
-    public LocalDate getReleaseDate() {
+    public String getReleaseDate() {
         return releaseDate;
     }
 
@@ -49,7 +47,7 @@ public final class Movie {
         this.countryOfOrigin = countryOfOrigin;
     }
 
-    public void setReleaseDate(final LocalDate releaseDate) {
+    public void setReleaseDate(final String releaseDate) {
         this.releaseDate = releaseDate;
     }
 

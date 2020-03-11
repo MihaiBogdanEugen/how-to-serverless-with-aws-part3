@@ -4,7 +4,6 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.models.MovieInfo;
-import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.models.convertors.LocalDateConverter;
 
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +37,7 @@ public final class MoviesDynamoDbRepository {
 
         final var movieInfos = lines.stream()
                 .map(line -> line.split(","))
-                .map(parts -> new MovieInfo(parts[0], parts[1], parts[2], LocalDateConverter.parseString(parts[3])))
+                .map(parts -> new MovieInfo(parts[0], parts[1], parts[2], parts[3]))
                 .collect(Collectors.toList());
 
         return saveMovies(movieInfos);
