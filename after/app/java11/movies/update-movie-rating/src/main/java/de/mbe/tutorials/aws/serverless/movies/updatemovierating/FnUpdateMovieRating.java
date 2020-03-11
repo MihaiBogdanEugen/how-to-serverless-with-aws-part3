@@ -1,19 +1,20 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovierating;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.handlers.TracingHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.mbe.tutorials.aws.serverless.movies.updatemovierating.config.DaggerFnComponent;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.MovieRating;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.utils.APIGatewayV2ProxyResponseUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import javax.inject.Inject;
 
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
@@ -21,14 +22,22 @@ public final class FnUpdateMovieRating implements RequestHandler<APIGatewayV2Pro
 
     private static final Logger LOGGER = LogManager.getLogger(FnUpdateMovieRating.class);
 
-    @Inject
-    ObjectMapper objectMapper;
-
-    @Inject
-    MoviesDynamoDbRepository moviesDynamoDbRepository;
+    private final ObjectMapper objectMapper;
+    private final MoviesDynamoDbRepository moviesDynamoDbRepository;
 
     public FnUpdateMovieRating() {
-        DaggerFnComponent.builder().build().inject(this);
+
+        objectMapper = new ObjectMapper();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+
+        final var amazonDynamoDB = AmazonDynamoDBClientBuilder
+                .standard()
+                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+                .build();
+
+        final var movieRatingsTable = System.getenv("MOVIE_RATINGS_TABLE");
+
+        moviesDynamoDbRepository = new MoviesDynamoDbRepository(amazonDynamoDB, movieRatingsTable);
     }
 
     @Override

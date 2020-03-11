@@ -1,18 +1,19 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
-import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.config.DaggerFnComponent;
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.handlers.TracingHandler;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.MoviesDynamoDbRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -22,17 +23,26 @@ public final class FnUploadMovieInfos implements RequestHandler<S3Event, Integer
 
     private static final Logger LOGGER = LogManager.getLogger(FnUploadMovieInfos.class);
 
-    @Inject
-    @Named("movieInfosBucket") String movieInfosBucket;
-
-    @Inject
-    AmazonS3 amazonS3;
-
-    @Inject
-    MoviesDynamoDbRepository moviesDynamoDbRepository;
+    private final String movieInfosBucket;
+    private final AmazonS3 amazonS3;
+    private final MoviesDynamoDbRepository moviesDynamoDbRepository;
 
     public FnUploadMovieInfos() {
-        DaggerFnComponent.builder().build().inject(this);
+
+        final var amazonDynamoDB = AmazonDynamoDBClientBuilder
+                .standard()
+                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+                .build();
+
+        amazonS3 = AmazonS3ClientBuilder
+                .standard()
+                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+                .build();
+
+        movieInfosBucket = System.getenv("MOVIE_INFOS_BUCKET");
+        final var movieInfosTable = System.getenv("MOVIE_INFOS_TABLE");
+
+        moviesDynamoDbRepository = new MoviesDynamoDbRepository(amazonDynamoDB, movieInfosTable);
     }
 
     @Override

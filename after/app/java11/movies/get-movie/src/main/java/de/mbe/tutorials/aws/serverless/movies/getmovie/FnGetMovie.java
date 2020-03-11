@@ -1,18 +1,21 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.handlers.TracingHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.mbe.tutorials.aws.serverless.movies.getmovie.config.DaggerFnComponent;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.utils.APIGatewayV2ProxyResponseUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import javax.inject.Inject;
 
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
@@ -20,14 +23,28 @@ public final class FnGetMovie implements RequestHandler<APIGatewayV2ProxyRequest
 
     private static final Logger LOGGER = LogManager.getLogger(FnGetMovie.class);
 
-    @Inject
-    ObjectMapper objectMapper;
-
-    @Inject
-    MoviesDynamoDbRepository moviesDynamoDbRepository;
+    private final ObjectMapper objectMapper;
+    private final MoviesDynamoDbRepository moviesDynamoDbRepository;
 
     public FnGetMovie() {
-        DaggerFnComponent.builder().build().inject(this);
+
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        final var amazonDynamoDB = AmazonDynamoDBClientBuilder
+                .standard()
+                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+                .build();
+
+        final var movieInfosTable = System.getenv("MOVIE_INFOS_TABLE");
+        final var movieRatingsTable = System.getenv("MOVIE_RATINGS_TABLE");
+
+        moviesDynamoDbRepository = new MoviesDynamoDbRepository(
+                amazonDynamoDB,
+                movieInfosTable,
+                movieRatingsTable);
     }
 
     @Override
