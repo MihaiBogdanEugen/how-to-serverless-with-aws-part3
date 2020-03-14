@@ -47,8 +47,6 @@ public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatew
     @Override
     public void handleRequest(final InputStream input, final OutputStream output, final Context context) throws IOException {
 
-        LOGGER.info("FnAddMovieRating.getRemainingTimeInMillis {} ", context.getRemainingTimeInMillis());
-
         try {
 
             final var movieRating = getMovieRating(input);

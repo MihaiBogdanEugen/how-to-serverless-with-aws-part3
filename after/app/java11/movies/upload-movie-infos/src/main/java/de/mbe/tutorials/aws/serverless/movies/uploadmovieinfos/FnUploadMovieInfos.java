@@ -60,8 +60,6 @@ public final class FnUploadMovieInfos implements RequestStreamHandler, APIGatewa
     @Override
     public void handleRequest(final InputStream input, final OutputStream output, final Context context) throws IOException {
 
-        LOGGER.info("FnUploadMovieInfos.getRemainingTimeInMillis {} ", context.getRemainingTimeInMillis());
-
         try {
 
             final var objectKeys = getObjectKeys(input);

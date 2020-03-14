@@ -48,8 +48,6 @@ public final class FnGetMovie implements RequestStreamHandler, APIGatewayProxyRe
     @Override
     public void handleRequest(final InputStream input, final OutputStream output, final Context context) throws IOException {
 
-        LOGGER.info("FnGetMovie.getRemainingTimeInMillis {} ", context.getRemainingTimeInMillis());
-
         try {
 
             final var movieId = getId(input);

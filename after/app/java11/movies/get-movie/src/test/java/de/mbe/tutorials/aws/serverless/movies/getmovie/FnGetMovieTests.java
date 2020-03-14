@@ -1,7 +1,6 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie;
 
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.models.Movie;
@@ -23,7 +22,6 @@ import static org.mockito.Mockito.when;
 public final class FnGetMovieTests {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final Context CONTEXT = new TestContext();
 
     @Mock
     private MoviesDynamoDbRepository moviesDynamoDbRepository;
@@ -51,7 +49,7 @@ public final class FnGetMovieTests {
         final var input = getCorrectInput(expectMovie.getMovieId());
         final var output = new ByteArrayOutputStream();
 
-        fnGetMovie.handleRequest(input, output, CONTEXT);
+        fnGetMovie.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -79,7 +77,7 @@ public final class FnGetMovieTests {
         final var input = getCorrectInput(expectMovie.getMovieId());
         final var output = new ByteArrayOutputStream();
 
-        fnGetMovie.handleRequest(input, output, CONTEXT);
+        fnGetMovie.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -107,7 +105,7 @@ public final class FnGetMovieTests {
         final var input = getCorrectInput(expectMovie.getMovieId());
         final var output = new ByteArrayOutputStream();
 
-        fnGetMovie.handleRequest(input, output, CONTEXT);
+        fnGetMovie.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -130,7 +128,7 @@ public final class FnGetMovieTests {
         final var input = getIncorrectInput();
         final var output = new ByteArrayOutputStream();
 
-        fnGetMovie.handleRequest(input, output, CONTEXT);
+        fnGetMovie.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -152,7 +150,7 @@ public final class FnGetMovieTests {
 
         final var output = new ByteArrayOutputStream();
 
-        fnGetMovie.handleRequest(getIncorrectInputNullEvent(), output, CONTEXT);
+        fnGetMovie.handleRequest(getIncorrectInputNullEvent(), output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -174,7 +172,7 @@ public final class FnGetMovieTests {
 
         final var output = new ByteArrayOutputStream();
 
-        fnGetMovie.handleRequest(getCorrectInput(""), output, CONTEXT);
+        fnGetMovie.handleRequest(getCorrectInput(""), output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);

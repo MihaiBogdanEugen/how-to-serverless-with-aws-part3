@@ -1,7 +1,6 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovierating;
 
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.MovieRating;
@@ -24,7 +23,6 @@ import static org.mockito.Mockito.doThrow;
 public final class FnUpdateMovieRatingTests {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final Context CONTEXT = new TestContext();
 
     @Mock
     private MoviesDynamoDbRepository moviesDynamoDbRepository;
@@ -49,7 +47,7 @@ public final class FnUpdateMovieRatingTests {
         final var input = getCorrectInput(expectMovieRating);
         final var output = new ByteArrayOutputStream();
 
-        fnUpdateMovieRating.handleRequest(input, output, CONTEXT);
+        fnUpdateMovieRating.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -75,7 +73,7 @@ public final class FnUpdateMovieRatingTests {
         final var input = getIncorrectInput();
         final var output = new ByteArrayOutputStream();
 
-        fnUpdateMovieRating.handleRequest(input, output, CONTEXT);
+        fnUpdateMovieRating.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -100,7 +98,7 @@ public final class FnUpdateMovieRatingTests {
 
         final var output = new ByteArrayOutputStream();
 
-        fnUpdateMovieRating.handleRequest(getIncorrectInputNullEvent(), output, CONTEXT);
+        fnUpdateMovieRating.handleRequest(getIncorrectInputNullEvent(), output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -125,7 +123,7 @@ public final class FnUpdateMovieRatingTests {
 
         final var output = new ByteArrayOutputStream();
 
-        fnUpdateMovieRating.handleRequest(getCorrectInputWrongBody(new MovieRating()), output, CONTEXT);
+        fnUpdateMovieRating.handleRequest(getCorrectInputWrongBody(new MovieRating()), output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -158,7 +156,7 @@ public final class FnUpdateMovieRatingTests {
         final var input = getCorrectInput(expectMovieRating);
         final var output = new ByteArrayOutputStream();
 
-        fnUpdateMovieRating.handleRequest(input, output, CONTEXT);
+        fnUpdateMovieRating.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);

@@ -1,7 +1,6 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos;
 
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.services.UploadFromS3ToDynamoDBService;
@@ -24,7 +23,6 @@ import static org.mockito.Mockito.when;
 public final class FnUploadMovieInfosTests {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final Context CONTEXT = new TestContext();
     private static final String MOVIE_INFOS_BUCKET = UUID.randomUUID().toString();
     private static final String INCORRECT_BUCKET = UUID.randomUUID().toString();
 
@@ -48,7 +46,7 @@ public final class FnUploadMovieInfosTests {
         final var input = getCorrectInput(firstObjectKey);
         final var output = new ByteArrayOutputStream();
 
-        fnUploadMovieInfos.handleRequest(input, output, CONTEXT);
+        fnUploadMovieInfos.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -95,7 +93,7 @@ public final class FnUploadMovieInfosTests {
         final var input = getCorrectInput(files);
         final var output = new ByteArrayOutputStream();
 
-        fnUploadMovieInfos.handleRequest(input, output, CONTEXT);
+        fnUploadMovieInfos.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -121,7 +119,7 @@ public final class FnUploadMovieInfosTests {
         final var input = getIncorrectInput();
         final var output = new ByteArrayOutputStream();
 
-        fnUploadMovieInfos.handleRequest(input, output, CONTEXT);
+        fnUploadMovieInfos.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -146,7 +144,7 @@ public final class FnUploadMovieInfosTests {
 
         final var output = new ByteArrayOutputStream();
 
-        fnUploadMovieInfos.handleRequest(getIncorrectInputNullEvent(), output, CONTEXT);
+        fnUploadMovieInfos.handleRequest(getIncorrectInputNullEvent(), output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -176,7 +174,7 @@ public final class FnUploadMovieInfosTests {
         final var input = getCorrectInput(firstObjectKey);
         final var output = new ByteArrayOutputStream();
 
-        fnUploadMovieInfos.handleRequest(input, output, CONTEXT);
+        fnUploadMovieInfos.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
@@ -206,7 +204,7 @@ public final class FnUploadMovieInfosTests {
         final var input = getCorrectInput(firstObjectKey);
         final var output = new ByteArrayOutputStream();
 
-        fnUploadMovieInfos.handleRequest(input, output, CONTEXT);
+        fnUploadMovieInfos.handleRequest(input, output, null);
 
         assertNotNull(output);
         assertTrue(output.size() > 0);
