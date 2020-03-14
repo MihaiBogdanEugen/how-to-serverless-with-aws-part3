@@ -1,6 +1,5 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie.repository.models;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 
@@ -8,16 +7,9 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 public final class MovieInfo {
 
     @DynamoDBHashKey
-    @DynamoDBAttribute(attributeName = "movie_id")
     private String movieId;
-
-    @DynamoDBAttribute(attributeName = "name")
     private String name;
-
-    @DynamoDBAttribute(attributeName = "country_of_origin")
     private String countryOfOrigin;
-
-    @DynamoDBAttribute(attributeName = "release_date")
     private String releaseDate;
 
     public MovieInfo() { }

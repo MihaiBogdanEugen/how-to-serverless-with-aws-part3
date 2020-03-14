@@ -10,11 +10,7 @@ public final class MovieRating {
     @DynamoDBHashKey
     @DynamoDBAttribute(attributeName = "movie_id")
     private String movieId;
-
-    @DynamoDBAttribute(attributeName = "rotten_tomatoes_rating")
     private Integer rottenTomatoesRating;
-
-    @DynamoDBAttribute(attributeName = "imdb_rating")
     private Integer imdbRating;
 
     public MovieRating() { }
