@@ -1,6 +1,5 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovierating;
 
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.MovieRating;
@@ -9,18 +8,20 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public final class FnUpdateMovieRatingTests {
+public final class FnUpdateMovieRatingTests implements TestUtils {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -37,14 +38,12 @@ public final class FnUpdateMovieRatingTests {
     @Test
     void correctInputWithExistingIdReturnsOk() throws IOException {
 
-        final var expectMovieRating = new MovieRating();
-        expectMovieRating.setMovieId("mv1");
-        expectMovieRating.setImdbRating(99);
-        expectMovieRating.setRottenTomatoesRating(66);
+        final var movieId = UUID.randomUUID().toString();
+        final var expectedMovieRating = getRandomMovieRating(movieId);
 
-        doNothing().when(moviesDynamoDbRepository).updateMovieRating(expectMovieRating);
+        when(moviesDynamoDbRepository.updateMovieRating(expectedMovieRating)).thenReturn(expectedMovieRating);
 
-        final var input = getCorrectInput(expectMovieRating);
+        final var input = getCorrectInput(expectedMovieRating);
         final var output = new ByteArrayOutputStream();
 
         fnUpdateMovieRating.handleRequest(input, output, null);
@@ -64,7 +63,8 @@ public final class FnUpdateMovieRatingTests {
         assertEquals("application/json", actualResponse.getHeaders().get("Content-Type"));
         assertNotNull(actualResponse.getBody());
 
-        assertEquals("SUCCESS", actualResponse.getBody());
+        final var actualMovieRating = OBJECT_MAPPER.readValue(actualResponse.getBody(), MovieRating.class);
+        assertEquals(expectedMovieRating, actualMovieRating);
     }
 
     @Test
@@ -146,12 +146,10 @@ public final class FnUpdateMovieRatingTests {
     @Test
     void correctInputWithFaultyDbReturnsInternalServerError() throws IOException {
 
-        final var expectMovieRating = new MovieRating();
-        expectMovieRating.setMovieId("mv1");
-        expectMovieRating.setImdbRating(99);
-        expectMovieRating.setRottenTomatoesRating(66);
+        final var movieId = UUID.randomUUID().toString();
+        final var expectMovieRating = getRandomMovieRating(movieId);
 
-        doThrow(AmazonDynamoDBException.class).when(moviesDynamoDbRepository).updateMovieRating(expectMovieRating);
+        doThrow(DynamoDbException.class).when(moviesDynamoDbRepository).updateMovieRating(expectMovieRating);
 
         final var input = getCorrectInput(expectMovieRating);
         final var output = new ByteArrayOutputStream();
@@ -169,8 +167,7 @@ public final class FnUpdateMovieRatingTests {
         assertNotNull(actualResponse.getHeaders());
         assertEquals(1, actualResponse.getHeaders().size());
         assertEquals("application/json", actualResponse.getHeaders().get("Content-Type"));
-        assertNotNull(actualResponse.getBody());
-        assertEquals("null (Service: null; Status Code: 0; Error Code: null; Request ID: null)", actualResponse.getBody());
+        assertNull(actualResponse.getBody());
     }
 
     private static InputStream getCorrectInput(final MovieRating movieRating) {

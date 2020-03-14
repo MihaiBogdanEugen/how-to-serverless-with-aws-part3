@@ -1,7 +1,5 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos;
 
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.services.UploadFromS3ToDynamoDBService;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -169,7 +169,7 @@ public final class FnUploadMovieInfosTests {
 
         final var firstObjectKey = UUID.randomUUID() + ".csv";
         final var noOfMovies = new Random().nextInt();
-        when(uploadFromS3ToDynamoDBService.upload(List.of(firstObjectKey))).thenThrow(AmazonDynamoDBException.class);
+        when(uploadFromS3ToDynamoDBService.upload(List.of(firstObjectKey))).thenThrow(DynamoDbException.class);
 
         final var input = getCorrectInput(firstObjectKey);
         final var output = new ByteArrayOutputStream();
@@ -189,9 +189,7 @@ public final class FnUploadMovieInfosTests {
         assertTrue(actualResponse.getHeaders().containsKey("Content-Type"));
 
         assertEquals("application/json", actualResponse.getHeaders().get("Content-Type"));
-        assertNotNull(actualResponse.getBody());
-
-        assertEquals("null (Service: null; Status Code: 0; Error Code: null; Request ID: null)", actualResponse.getBody());
+        assertNull(actualResponse.getBody());
     }
 
     @Test
@@ -199,7 +197,7 @@ public final class FnUploadMovieInfosTests {
 
         final var firstObjectKey = UUID.randomUUID() + ".csv";
         final var noOfMovies = new Random().nextInt();
-        when(uploadFromS3ToDynamoDBService.upload(List.of(firstObjectKey))).thenThrow(AmazonS3Exception.class);
+        when(uploadFromS3ToDynamoDBService.upload(List.of(firstObjectKey))).thenThrow(S3Exception.class);
 
         final var input = getCorrectInput(firstObjectKey);
         final var output = new ByteArrayOutputStream();
@@ -219,9 +217,7 @@ public final class FnUploadMovieInfosTests {
         assertTrue(actualResponse.getHeaders().containsKey("Content-Type"));
 
         assertEquals("application/json", actualResponse.getHeaders().get("Content-Type"));
-        assertNotNull(actualResponse.getBody());
-
-        assertEquals("null (Service: null; Status Code: 0; Error Code: null; Request ID: null; S3 Extended Request ID: null)", actualResponse.getBody());
+        assertNull(actualResponse.getBody());
     }
 
     private static InputStream getCorrectInput(final String objectKey) {

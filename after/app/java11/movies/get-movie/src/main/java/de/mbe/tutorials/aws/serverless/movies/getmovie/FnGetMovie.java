@@ -1,16 +1,16 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
-import com.amazonaws.xray.AWSXRay;
-import com.amazonaws.xray.handlers.TracingHandler;
+import com.amazonaws.xray.interceptors.TracingInterceptor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.MoviesDynamoDbRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,16 +27,20 @@ public final class FnGetMovie implements RequestStreamHandler, APIGatewayProxyRe
     private final MoviesDynamoDbRepository moviesDynamoDbRepository;
 
     public FnGetMovie() {
-        final var amazonDynamoDB = AmazonDynamoDBClientBuilder
-                .standard()
-                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+
+        final var tracingConfiguration = ClientOverrideConfiguration.builder()
+                .addExecutionInterceptor(new TracingInterceptor())
+                .build();
+
+        final var dynamoDBClient = DynamoDbClient.builder()
+                .overrideConfiguration(tracingConfiguration)
                 .build();
 
         final var movieInfosTable = System.getenv("MOVIE_INFOS_TABLE");
         final var movieRatingsTable = System.getenv("MOVIE_RATINGS_TABLE");
 
         moviesDynamoDbRepository = new MoviesDynamoDbRepository(
-                amazonDynamoDB,
+                dynamoDBClient,
                 movieInfosTable,
                 movieRatingsTable);
     }
@@ -53,7 +57,7 @@ public final class FnGetMovie implements RequestStreamHandler, APIGatewayProxyRe
             final var movieId = getId(input);
             LOGGER.info("Retrieving movie {}", movieId);
 
-            final var movie = moviesDynamoDbRepository.getByMovieId(movieId);
+            final var movie = moviesDynamoDbRepository.getMovieById(movieId);
             if (movie == null) {
                 writeNotFound(output, "Movie " + movieId + " not found");
             }
@@ -63,8 +67,8 @@ public final class FnGetMovie implements RequestStreamHandler, APIGatewayProxyRe
 
         } catch (IllegalArgumentException error) {
             writeBadRequest(output, error);
-        } catch (AmazonDynamoDBException error) {
-            writeAmazonDynamoDBException(output, error);
+        } catch (DynamoDbException error) {
+            writeDynamoDbException(output, error);
         } catch (Exception error) {
             writeInternalServerError(output, error);
         }

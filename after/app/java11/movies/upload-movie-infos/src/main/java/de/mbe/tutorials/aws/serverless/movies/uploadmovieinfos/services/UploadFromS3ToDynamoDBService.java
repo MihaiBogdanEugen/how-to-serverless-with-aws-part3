@@ -1,7 +1,9 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.services;
 
-import com.amazonaws.services.s3.AmazonS3;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.MoviesDynamoDbRepository;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,12 +13,12 @@ import java.util.List;
 
 public class UploadFromS3ToDynamoDBService {
 
-    private final AmazonS3 amazonS3;
+    private final S3Client s3Client;
     private final String movieInfoBucket;
     private final MoviesDynamoDbRepository moviesDynamoDbRepository;
 
-    public UploadFromS3ToDynamoDBService(final AmazonS3 amazonS3, final String movieInfoBucket, final MoviesDynamoDbRepository moviesDynamoDbRepository) {
-        this.amazonS3 = amazonS3;
+    public UploadFromS3ToDynamoDBService(final S3Client s3Client, final String movieInfoBucket, final MoviesDynamoDbRepository moviesDynamoDbRepository) {
+        this.s3Client = s3Client;
         this.movieInfoBucket = movieInfoBucket;
         this.moviesDynamoDbRepository = moviesDynamoDbRepository;
     }
@@ -28,18 +30,21 @@ public class UploadFromS3ToDynamoDBService {
 
         for (final var objectKey : objectKeys) {
 
-            final var s3Object = amazonS3.getObject(movieInfoBucket, objectKey);
+            final var request = GetObjectRequest.builder()
+                    .bucket(movieInfoBucket)
+                    .key(objectKey)
+                    .build();
+
+            final var inputStream = s3Client.getObject(request, ResponseTransformer.toInputStream());
 
             String line;
 
-            try (final var inputStream = s3Object.getObjectContent()) {
-                try (final var bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
-                    while ((line = bufferedReader.readLine()) != null) {
-                        lines.add(line);
-                        if (lines.size() == 25) {
-                            result += moviesDynamoDbRepository.saveLines(lines);
-                            lines.clear();
-                        }
+            try (final var bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
+                while ((line = bufferedReader.readLine()) != null) {
+                    lines.add(line);
+                    if (lines.size() == 25) {
+                        result += moviesDynamoDbRepository.saveLines(lines);
+                        lines.clear();
                     }
                 }
             }

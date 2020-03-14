@@ -1,19 +1,19 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.xray.AWSXRay;
-import com.amazonaws.xray.handlers.TracingHandler;
+import com.amazonaws.xray.interceptors.TracingInterceptor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.services.UploadFromS3ToDynamoDBService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,22 +34,24 @@ public final class FnUploadMovieInfos implements RequestStreamHandler, APIGatewa
 
     public FnUploadMovieInfos() {
 
-        final var amazonDynamoDB = AmazonDynamoDBClientBuilder
-                .standard()
-                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+        final var tracingConfiguration = ClientOverrideConfiguration.builder()
+                .addExecutionInterceptor(new TracingInterceptor())
                 .build();
 
-        final var amazonS3 = AmazonS3ClientBuilder
-                .standard()
-                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+        final var dynamoDbClient = DynamoDbClient.builder()
+                .overrideConfiguration(tracingConfiguration)
+                .build();
+
+        final var s3Client = S3Client.builder()
+                .overrideConfiguration(tracingConfiguration)
                 .build();
 
         movieInfosBucket = System.getenv("MOVIE_INFOS_BUCKET");
         final var movieInfosTable = System.getenv("MOVIE_INFOS_TABLE");
 
-        final var moviesDynamoDbRepository = new MoviesDynamoDbRepository(amazonDynamoDB, movieInfosTable);
+        final var moviesDynamoDbRepository = new MoviesDynamoDbRepository(dynamoDbClient, movieInfosTable);
 
-        uploadFromS3ToDynamoDBService = new UploadFromS3ToDynamoDBService(amazonS3, movieInfosBucket, moviesDynamoDbRepository);
+        uploadFromS3ToDynamoDBService = new UploadFromS3ToDynamoDBService(s3Client, movieInfosBucket, moviesDynamoDbRepository);
     }
 
     public FnUploadMovieInfos(final String movieInfosBucket, final UploadFromS3ToDynamoDBService uploadFromS3ToDynamoDBService) {
@@ -68,10 +70,10 @@ public final class FnUploadMovieInfos implements RequestStreamHandler, APIGatewa
 
         } catch (IllegalArgumentException error) {
             writeBadRequest(output, error);
-        } catch (AmazonDynamoDBException error) {
-            writeAmazonDynamoDBException(output, error);
-        } catch (AmazonS3Exception error) {
-            writeAmazonS3Exception(output, error);
+        } catch (DynamoDbException error) {
+            writeDynamoDbException(output, error);
+        } catch (S3Exception error) {
+            writeS3Exception(output, error);
         } catch (Exception error) {
             writeInternalServerError(output, error);
         }

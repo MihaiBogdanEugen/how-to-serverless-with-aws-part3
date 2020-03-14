@@ -1,11 +1,8 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovierating;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
-import com.amazonaws.xray.AWSXRay;
-import com.amazonaws.xray.handlers.TracingHandler;
+import com.amazonaws.xray.interceptors.TracingInterceptor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +10,9 @@ import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.Movie
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.MovieRating;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,14 +30,17 @@ public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatew
 
     public FnUpdateMovieRating() {
 
-        final var amazonDynamoDB = AmazonDynamoDBClientBuilder
-                .standard()
-                .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
+        final var tracingConfiguration = ClientOverrideConfiguration.builder()
+                .addExecutionInterceptor(new TracingInterceptor())
+                .build();
+
+        final var dynamoDBClient = DynamoDbClient.builder()
+                .overrideConfiguration(tracingConfiguration)
                 .build();
 
         final var movieRatingsTable = System.getenv("MOVIE_RATINGS_TABLE");
 
-        moviesDynamoDbRepository = new MoviesDynamoDbRepository(amazonDynamoDB, movieRatingsTable);
+        moviesDynamoDbRepository = new MoviesDynamoDbRepository(dynamoDBClient, movieRatingsTable);
     }
 
     public FnUpdateMovieRating(final MoviesDynamoDbRepository moviesDynamoDbRepository) {
@@ -49,16 +52,16 @@ public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatew
 
         try {
 
-            final var movieRating = getMovieRating(input);
+            var movieRating = getMovieRating(input);
             LOGGER.info("Patching movie {}", movieRating.getMovieId());
 
-            moviesDynamoDbRepository.updateMovieRating(movieRating);
-            writeOk(output, "SUCCESS");
+            movieRating = moviesDynamoDbRepository.updateMovieRating(movieRating);
+            writeOk(output, OBJECT_MAPPER.writeValueAsString(movieRating));
 
         } catch (IllegalArgumentException error) {
             writeBadRequest(output, error);
-        } catch (AmazonDynamoDBException error) {
-            writeAmazonDynamoDBException(output, error);
+        } catch (DynamoDbException error) {
+            writeDynamoDbException(output, error);
         } catch (Exception error) {
             writeInternalServerError(output, error);
         }

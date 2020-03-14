@@ -1,6 +1,5 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie;
 
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.models.Movie;
@@ -9,17 +8,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public final class FnGetMovieTests {
+public final class FnGetMovieTests implements TestUtils {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -29,22 +30,17 @@ public final class FnGetMovieTests {
     private FnGetMovie fnGetMovie;
 
     @BeforeEach
-    void init() {
+    void beforeEach() {
         fnGetMovie = new FnGetMovie(moviesDynamoDbRepository);
     }
 
     @Test
     void correctInputWithExistingIdReturnsOk() throws IOException {
 
-        final var expectMovie = new Movie();
-        expectMovie.setMovieId("mv1");
-        expectMovie.setName("aaa");
-        expectMovie.setCountryOfOrigin("bbb");
-        expectMovie.setReleaseDate("1985-12-24");
-        expectMovie.setImdbRating(99);
-        expectMovie.setRottenTomatoesRating(66);
+        final var movieId = UUID.randomUUID().toString();
+        final var expectMovie = getRandomMovie(movieId);
 
-        when(moviesDynamoDbRepository.getByMovieId(expectMovie.getMovieId())).thenReturn(expectMovie);
+        when(moviesDynamoDbRepository.getMovieById(expectMovie.getMovieId())).thenReturn(expectMovie);
 
         final var input = getCorrectInput(expectMovie.getMovieId());
         final var output = new ByteArrayOutputStream();
@@ -69,10 +65,11 @@ public final class FnGetMovieTests {
     @Test
     void correctInputWithUnknownIdReturnsNotFound() throws IOException {
 
+        final var movieId = UUID.randomUUID().toString();
         final var expectMovie = new Movie();
-        expectMovie.setMovieId("mv1");
+        expectMovie.setMovieId(movieId);
 
-        when(moviesDynamoDbRepository.getByMovieId(expectMovie.getMovieId())).thenReturn(null);
+        when(moviesDynamoDbRepository.getMovieById(expectMovie.getMovieId())).thenReturn(null);
 
         final var input = getCorrectInput(expectMovie.getMovieId());
         final var output = new ByteArrayOutputStream();
@@ -91,16 +88,17 @@ public final class FnGetMovieTests {
         assertTrue(actualResponse.getHeaders().containsKey("Content-Type"));
         assertEquals("application/json", actualResponse.getHeaders().get("Content-Type"));
         assertNotNull(actualResponse.getBody());
-        assertEquals("Movie mv1 not found", actualResponse.getBody());
+        assertEquals("Movie " + movieId +" not found", actualResponse.getBody());
     }
 
     @Test
     void correctInputWithFaultyDbReturnsInternalServerError() throws IOException {
 
+        final var movieId = UUID.randomUUID().toString();
         final var expectMovie = new Movie();
-        expectMovie.setMovieId("mv1");
+        expectMovie.setMovieId(movieId);
 
-        when(moviesDynamoDbRepository.getByMovieId(expectMovie.getMovieId())).thenThrow(AmazonDynamoDBException.class);
+        when(moviesDynamoDbRepository.getMovieById(expectMovie.getMovieId())).thenThrow(DynamoDbException.class);
 
         final var input = getCorrectInput(expectMovie.getMovieId());
         final var output = new ByteArrayOutputStream();
@@ -118,8 +116,7 @@ public final class FnGetMovieTests {
         assertEquals(1, actualResponse.getHeaders().size());
         assertTrue(actualResponse.getHeaders().containsKey("Content-Type"));
         assertEquals("application/json", actualResponse.getHeaders().get("Content-Type"));
-        assertNotNull(actualResponse.getBody());
-        assertEquals("null (Service: null; Status Code: 0; Error Code: null; Request ID: null)", actualResponse.getBody());
+        assertNull(actualResponse.getBody());
     }
 
     @Test

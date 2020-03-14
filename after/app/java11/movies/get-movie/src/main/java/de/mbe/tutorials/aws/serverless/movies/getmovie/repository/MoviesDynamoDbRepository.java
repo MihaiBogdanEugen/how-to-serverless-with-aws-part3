@@ -1,51 +1,38 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie.repository;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.models.Movie;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.models.MovieInfo;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.models.MovieRating;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.GetItemRequest;
 
-import static com.amazonaws.util.StringUtils.isNullOrEmpty;
+import java.util.Map;
+import java.util.Optional;
 
 public class MoviesDynamoDbRepository {
 
-    private final DynamoDBMapper dynamoDBMapper;
-    private final DynamoDBMapperConfig readMovieRatingConfig;
-    private final DynamoDBMapperConfig readMovieInfoConfig;
+    private final DynamoDbClient dynamoDbClient;
+    private final String movieInfosTable;
+    private final String movieRatingsTable;
 
-    public MoviesDynamoDbRepository(final AmazonDynamoDB amazonDynamoDB, final String movieInfosTable, final String movieRatingsTable) {
-
-        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
-
-        final var readMovieRatingConfigBuilder = DynamoDBMapperConfig.builder()
-                .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT);
-        if (!isNullOrEmpty(movieRatingsTable)) {
-            readMovieRatingConfigBuilder.withTableNameOverride(new DynamoDBMapperConfig.TableNameOverride(movieRatingsTable));
-        }
-
-        readMovieRatingConfig = readMovieRatingConfigBuilder.build();
-
-        final var readMovieInfoConfigBuilder = DynamoDBMapperConfig.builder()
-                .withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT);
-        if (!isNullOrEmpty(movieInfosTable)) {
-            readMovieInfoConfigBuilder.withTableNameOverride(new DynamoDBMapperConfig.TableNameOverride(movieInfosTable));
-        }
-
-        readMovieInfoConfig = readMovieInfoConfigBuilder.build();
+    public MoviesDynamoDbRepository(final DynamoDbClient dynamoDbClient, final String movieInfosTable, final String movieRatingsTable) {
+        this.dynamoDbClient = dynamoDbClient;
+        this.movieInfosTable = movieInfosTable;
+        this.movieRatingsTable = movieRatingsTable;
     }
 
-    public Movie getByMovieId(final String movieId) {
+    public Movie getMovieById(final String movieId) {
 
-        final var movieInfo = dynamoDBMapper.load(MovieInfo.class, movieId, readMovieInfoConfig);
-        final var movieRating = dynamoDBMapper.load(MovieRating.class, movieId, readMovieRatingConfig);
-
-        final var movie = new Movie();
+        final var movieInfo = this.getMovieInfoById(movieId);
+        final var movieRating = this.getMovieRatingById(movieId);
 
         if (movieInfo == null && movieRating == null) {
             return null;
         }
+
+        final var movie = new Movie();
+        movie.setMovieId(movieId);
 
         if (movieInfo != null) {
             movie.setName(movieInfo.getName());
@@ -58,7 +45,61 @@ public class MoviesDynamoDbRepository {
             movie.setRottenTomatoesRating(movieRating.getRottenTomatoesRating());
         }
 
-        movie.setMovieId(movieId);
         return movie;
+    }
+
+    private MovieInfo getMovieInfoById(final String movieId) {
+
+        final var getItemRequest = GetItemRequest.builder()
+                .key(Map.of("movieId", AttributeValue.builder().s(movieId).build()))
+                .tableName(movieInfosTable)
+                .consistentRead(true)
+                .build();
+
+        final var getItemResponse = dynamoDbClient.getItem(getItemRequest);
+        if (!getItemResponse.hasItem()) {
+            return null;
+        }
+
+        final var attributes = getItemResponse.item();
+        final var movieInfo = new MovieInfo();
+        movieInfo.setMovieId(movieId);
+
+        Optional.ofNullable(attributes.getOrDefault("name", null))
+                .ifPresent(attribute -> movieInfo.setName(attribute.s()));
+
+        Optional.ofNullable(attributes.getOrDefault("countryOfOrigin", null))
+                .ifPresent(attribute -> movieInfo.setCountryOfOrigin(attribute.s()));
+
+        Optional.ofNullable(attributes.getOrDefault("releaseDate", null))
+                .ifPresent(attribute -> movieInfo.setReleaseDate(attribute.s()));
+
+        return movieInfo;
+    }
+
+    private MovieRating getMovieRatingById(final String movieId) {
+
+        final var getItemRequest = GetItemRequest.builder()
+                .key(Map.of("movieId", AttributeValue.builder().s(movieId).build()))
+                .tableName(movieRatingsTable)
+                .consistentRead(true)
+                .build();
+
+        final var getItemResponse = dynamoDbClient.getItem(getItemRequest);
+        if (!getItemResponse.hasItem()) {
+            return null;
+        }
+
+        final var attributes = getItemResponse.item();
+        final var movieRating = new MovieRating();
+        movieRating.setMovieId(movieId);
+
+        Optional.ofNullable(attributes.getOrDefault("rottenTomatoesRating", null))
+                .ifPresent(attribute -> movieRating.setRottenTomatoesRating(Integer.parseInt(attribute.n())));
+
+        Optional.ofNullable(attributes.getOrDefault("imdbRating", null))
+                .ifPresent(attribute -> movieRating.setImdbRating(Integer.parseInt(attribute.n())));
+
+        return movieRating;
     }
 }

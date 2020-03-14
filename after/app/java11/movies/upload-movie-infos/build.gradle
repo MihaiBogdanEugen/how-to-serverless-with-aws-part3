@@ -1,4 +1,112 @@
+plugins {
+    id "java"
+    id "io.spring.dependency-management" version "1.0.9.RELEASE"
+}
+
+ext {
+    awsJavaSdkVersion = "2.10.86"
+    awsLambdaJavaCoreVersion = "1.2.0"
+    awsLambdaJavaLog4j2Version = "1.1.0"
+    awsXrayJavaSdkVersion = "2.4.0"
+    commonsLoggingVersion = "1.2"
+    gradleVersion = "6.2.1"
+    httpclientVersion = "4.5.9"
+    jacksonVersion = "2.10.3"
+    junitVersion = "5.6.0"
+    log4jVersion = "2.13.1"
+    mockitoVersion = "3.3.0"
+    nettyVersion = "4.1.47.Final"
+    reactiveStreamsVersion = "1.0.3"
+    slf4jVersion = "1.7.30"
+    testContainersVersion = "1.13.0"
+}
+
+group = "de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos"
+version = "1.0.0"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "com.amazonaws:aws-xray-recorder-sdk-bom:$awsXrayJavaSdkVersion"
+        mavenBom "software.amazon.awssdk:bom:$awsJavaSdkVersion"
+    }
+    dependencies {
+        dependency "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
+        dependency "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
+        dependency "commons-logging:commons-logging:$commonsLoggingVersion"
+        dependency "io.netty:netty-buffer:$nettyVersion"
+        dependency "io.netty:netty-codec-http:$nettyVersion"
+        dependency "io.netty:netty-codec:$nettyVersion"
+        dependency "io.netty:netty-common:$nettyVersion"
+        dependency "io.netty:netty-handler:$nettyVersion"
+        dependency "io.netty:netty-transport:$nettyVersion"
+        dependency "org.apache.httpcomponents:httpclient:$httpclientVersion"
+        dependency "org.apache.logging.log4j:log4j-api:$log4jVersion"
+        dependency "org.apache.logging.log4j:log4j-core:$log4jVersion"
+        dependency "org.reactivestreams:reactive-streams:$reactiveStreamsVersion"
+        dependency "org.slf4j:slf4j-api:$slf4jVersion"
+
+    }
+}
+
 dependencies {
-    implementation "com.amazonaws:aws-java-sdk-dynamodb"
-    implementation "com.amazonaws:aws-java-sdk-s3"
+    implementation "com.amazonaws:aws-lambda-java-core:$awsLambdaJavaCoreVersion"
+    implementation "com.amazonaws:aws-lambda-java-log4j2:$awsLambdaJavaLog4j2Version"
+    implementation "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2"
+    implementation "com.amazonaws:aws-xray-recorder-sdk-core"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
+    implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
+    implementation "software.amazon.awssdk:dynamodb"
+    implementation "software.amazon.awssdk:s3"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+    testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+    testImplementation "org.mockito:mockito-core:$mockitoVersion"
+    testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
+    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
+    testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+}
+
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into("lib") {
+        from configurations.runtimeClasspath
+    }
+    archiveFileName = "${project.name}.zip"
+}
+
+build.dependsOn buildZip
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}
+
+wrapper {
+    gradleVersion = "${gradleVersion}"
+    distributionType = Wrapper.DistributionType.ALL
+}
+
+configurations.all {
+    resolutionStrategy {
+        failOnVersionConflict()
+    }
 }

@@ -1,32 +1,24 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
-import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.models.MovieInfo;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.PutRequest;
+import software.amazon.awssdk.services.dynamodb.model.WriteRequest;
 
-import java.util.Collections;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-
-import static com.amazonaws.util.StringUtils.isNullOrEmpty;
+import java.util.Map;
 
 public final class MoviesDynamoDbRepository {
 
-    private final DynamoDBMapper dynamoDBMapper;
-    private final DynamoDBMapperConfig writeMovieInfoConfig;
+    private final DynamoDbClient dynamoDbClient;
+    private final String movieInfosTable;
 
-    public MoviesDynamoDbRepository(final AmazonDynamoDB amazonDynamoDB, final String movieInfosTable) {
-
-        dynamoDBMapper = new DynamoDBMapper(amazonDynamoDB);
-
-        final var writeMovieInfoConfigBuilder = DynamoDBMapperConfig.builder()
-                .withSaveBehavior(DynamoDBMapperConfig.SaveBehavior.PUT);
-        if (!isNullOrEmpty(movieInfosTable)) {
-            writeMovieInfoConfigBuilder.withTableNameOverride(new DynamoDBMapperConfig.TableNameOverride(movieInfosTable));
-        }
-
-        writeMovieInfoConfig = writeMovieInfoConfigBuilder.build();
+    public MoviesDynamoDbRepository(final DynamoDbClient dynamoDbClient, final String movieInfosTable) {
+        this.dynamoDbClient = dynamoDbClient;
+        this.movieInfosTable = movieInfosTable;
     }
 
     public int saveLines(final List<String> lines) {
@@ -35,22 +27,28 @@ public final class MoviesDynamoDbRepository {
             return 0;
         }
 
-        final var movieInfos = lines.stream()
-                .map(line -> line.split(","))
-                .map(parts -> new MovieInfo(parts[0], parts[1], parts[2], parts[3]))
-                .collect(Collectors.toList());
+        final var writeRequests = new ArrayList<WriteRequest>();
 
-        return saveMovies(movieInfos);
-    }
-
-    public int saveMovies(final List<MovieInfo> movieInfos) {
-
-        if (movieInfos.isEmpty()) {
-            return 0;
+        for (var line : lines) {
+            final var parts = line.split(",");
+            writeRequests.add(WriteRequest.builder()
+                    .putRequest(PutRequest.builder()
+                            .item(Map.ofEntries(
+                                    new AbstractMap.SimpleEntry<>("movieId", AttributeValue.builder().s(parts[0]).build()),
+                                    new AbstractMap.SimpleEntry<>("name", AttributeValue.builder().s(parts[1]).build()),
+                                    new AbstractMap.SimpleEntry<>("countryOfOrigin", AttributeValue.builder().s(parts[2]).build()),
+                                    new AbstractMap.SimpleEntry<>("releaseDate", AttributeValue.builder().s(parts[3]).build())
+                            ))
+                            .build())
+                    .build());
         }
 
-        dynamoDBMapper.batchWrite(movieInfos, Collections.emptyList(), writeMovieInfoConfig);
+        var batchItemRequest = BatchWriteItemRequest.builder()
+                .requestItems(Map.of(movieInfosTable, writeRequests))
+                .build();
 
-        return movieInfos.size();
+        dynamoDbClient.batchWriteItem(batchItemRequest);
+
+        return lines.size();
     }
 }

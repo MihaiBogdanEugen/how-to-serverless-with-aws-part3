@@ -1,10 +1,10 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos;
 
-import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,12 +29,12 @@ public interface APIGatewayProxyResponseUtils {
         write(output, 404, error.getMessage());
     }
 
-    default void writeAmazonDynamoDBException(final OutputStream output, final AmazonDynamoDBException error) throws IOException {
-        write(output, error.getStatusCode(), error.getMessage());
+    default void writeDynamoDbException(final OutputStream output, final DynamoDbException error) throws IOException {
+        write(output, error.statusCode(), error.getMessage());
     }
 
-    default void writeAmazonS3Exception(final OutputStream output, final AmazonS3Exception error) throws IOException {
-        write(output, error.getStatusCode(), error.getMessage());
+    default void writeS3Exception(final OutputStream output, final S3Exception error) throws IOException {
+        write(output, error.statusCode(), error.getMessage());
     }
 
     private void write(final OutputStream output, final int statusCode, final String body) throws IOException {

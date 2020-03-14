@@ -10,7 +10,9 @@ clean:
 	rm -rdf app/packages/
 ifeq ($(CODE_VERSION), java)
 	@(echo "Using Java11")
-	cd app/java11/movies/ && ./gradlew clean
+	$(call clean_java_fn,get-movie)
+	$(call clean_java_fn,update-movie-rating)
+	$(call clean_java_fn,upload-movie-infos)
 else ifeq ($(CODE_VERSION), python)
 	@(echo "Using Python3.8")
 else
@@ -21,7 +23,9 @@ endif
 test: clean
 ifeq ($(CODE_VERSION), java)
 	@(echo "Using Java11")
-	cd app/java11/movies/ && ./gradlew test
+	$(call test_java_fn,get-movie)
+	$(call test_java_fn,update-movie-rating)
+	$(call test_java_fn,upload-movie-infos)
 else ifeq ($(CODE_VERSION), python)
 	@(echo "Using Python3.8")
 else
@@ -102,9 +106,17 @@ ifndef TF_VAR_aws_account_id
 endif
 
 define package_java_fn
-	cd app/java11/movies/ && \
-	./gradlew :$(1):build && \
-	cp $(1)/build/distributions/$(1).zip ../../packages/$(1).zip
+	cd app/java11/movies/$(1)/ && \
+	./gradlew build && \
+	mv build/distributions/$(1).zip ../../../packages/$(1).zip
+endef
+
+define clean_java_fn
+	cd app/java11/movies/$(1) && ./gradlew clean
+endef
+
+define test_java_fn
+	cd app/java11/movies/$(1) && ./gradlew test
 endef
 
 define package_python_fn

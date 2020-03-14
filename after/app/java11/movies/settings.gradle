@@ -1,5 +1,0 @@
-rootProject.name = "movies"
-
-include ":get-movie"
-include ":update-movie-rating"
-include ":upload-movie-infos"

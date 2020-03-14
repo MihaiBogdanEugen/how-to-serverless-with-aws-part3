@@ -1,12 +1,7 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
-
-@DynamoDBTable(tableName = "movie_ratings")
 public final class MovieRating {
 
-    @DynamoDBHashKey
     private String movieId;
     private Integer rottenTomatoesRating;
     private Integer imdbRating;
