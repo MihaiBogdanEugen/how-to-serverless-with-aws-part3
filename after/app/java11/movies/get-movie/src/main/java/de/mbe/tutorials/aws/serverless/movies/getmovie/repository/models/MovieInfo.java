@@ -22,7 +22,7 @@ public final class MovieInfo {
 
     public MovieInfo() { }
 
-    public MovieInfo(String movieId, String name, String countryOfOrigin, String releaseDate) {
+    public MovieInfo(final String movieId, final String name, final String countryOfOrigin, final String releaseDate) {
         this.movieId = movieId;
         this.name = name;
         this.countryOfOrigin = countryOfOrigin;

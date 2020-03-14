@@ -42,4 +42,25 @@ public final class MovieRating {
     public void setImdbRating(final Integer imdbRating) {
         this.imdbRating = imdbRating;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MovieRating that = (MovieRating) o;
+
+        if (getMovieId() != null ? !getMovieId().equals(that.getMovieId()) : that.getMovieId() != null) return false;
+        if (getRottenTomatoesRating() != null ? !getRottenTomatoesRating().equals(that.getRottenTomatoesRating()) : that.getRottenTomatoesRating() != null)
+            return false;
+        return getImdbRating() != null ? getImdbRating().equals(that.getImdbRating()) : that.getImdbRating() == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = getMovieId() != null ? getMovieId().hashCode() : 0;
+        result = 31 * result + (getRottenTomatoesRating() != null ? getRottenTomatoesRating().hashCode() : 0);
+        result = 31 * result + (getImdbRating() != null ? getImdbRating().hashCode() : 0);
+        return result;
+    }
 }

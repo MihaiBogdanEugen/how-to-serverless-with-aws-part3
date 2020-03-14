@@ -3,29 +3,34 @@ package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.events.S3Event;
-import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.MoviesDynamoDbRepository;
+import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.services.UploadFromS3ToDynamoDBService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
-public final class FnUploadMovieInfos implements RequestHandler<S3Event, Integer> {
+import static com.amazonaws.util.StringUtils.isNullOrEmpty;
+
+public final class FnUploadMovieInfos implements RequestStreamHandler, APIGatewayProxyResponseUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(FnUploadMovieInfos.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final String movieInfosBucket;
-    private final AmazonS3 amazonS3;
-    private final MoviesDynamoDbRepository moviesDynamoDbRepository;
+    private final UploadFromS3ToDynamoDBService uploadFromS3ToDynamoDBService;
 
     public FnUploadMovieInfos() {
 
@@ -34,7 +39,7 @@ public final class FnUploadMovieInfos implements RequestHandler<S3Event, Integer
                 .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
                 .build();
 
-        amazonS3 = AmazonS3ClientBuilder
+        final var amazonS3 = AmazonS3ClientBuilder
                 .standard()
                 .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
                 .build();
@@ -42,55 +47,113 @@ public final class FnUploadMovieInfos implements RequestHandler<S3Event, Integer
         movieInfosBucket = System.getenv("MOVIE_INFOS_BUCKET");
         final var movieInfosTable = System.getenv("MOVIE_INFOS_TABLE");
 
-        moviesDynamoDbRepository = new MoviesDynamoDbRepository(amazonDynamoDB, movieInfosTable);
+        final var moviesDynamoDbRepository = new MoviesDynamoDbRepository(amazonDynamoDB, movieInfosTable);
+
+        uploadFromS3ToDynamoDBService = new UploadFromS3ToDynamoDBService(amazonS3, movieInfosBucket, moviesDynamoDbRepository);
+    }
+
+    public FnUploadMovieInfos(final String movieInfosBucket, final UploadFromS3ToDynamoDBService uploadFromS3ToDynamoDBService) {
+        this.movieInfosBucket = movieInfosBucket;
+        this.uploadFromS3ToDynamoDBService = uploadFromS3ToDynamoDBService;
     }
 
     @Override
-    public Integer handleRequest(S3Event input, Context context) {
+    public void handleRequest(final InputStream input, final OutputStream output, final Context context) throws IOException {
 
         LOGGER.info("FnUploadMovieInfos.getRemainingTimeInMillis {} ", context.getRemainingTimeInMillis());
 
-        var result = 0;
-        final var lines = new ArrayList<String>();
+        try {
+
+            final var objectKeys = getObjectKeys(input);
+            final var result = uploadFromS3ToDynamoDBService.upload(objectKeys);
+            writeOk(output, Integer.toString(result));
+
+        } catch (IllegalArgumentException error) {
+            writeBadRequest(output, error);
+        } catch (AmazonDynamoDBException error) {
+            writeAmazonDynamoDBException(output, error);
+        } catch (AmazonS3Exception error) {
+            writeAmazonS3Exception(output, error);
+        } catch (Exception error) {
+            writeInternalServerError(output, error);
+        }
+    }
+
+    private List<String> getObjectKeys(final InputStream input) {
+
+        final JsonNode event;
 
         try {
-            for (final var record : input.getRecords()) {
-
-                final var s3Entity = record.getS3();
-                final var bucketName = s3Entity.getBucket().getName();
-
-                if (!bucketName.equalsIgnoreCase(movieInfosBucket)) {
-                    continue;
-                }
-
-                final var key = s3Entity.getObject().getUrlDecodedKey();
-                final var s3Object = amazonS3.getObject(bucketName, key);
-
-                String line;
-
-                try (final var inputStream = s3Object.getObjectContent()) {
-                    try (final var bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
-                        while ((line = bufferedReader.readLine()) != null) {
-                            lines.add(line);
-                            if (lines.size() == 25) {
-                                result += moviesDynamoDbRepository.saveLines(lines);
-                                lines.clear();
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!lines.isEmpty()) {
-                result += moviesDynamoDbRepository.saveLines(lines);
-                lines.clear();
-            }
-        } catch (IOException | AmazonS3Exception | AmazonDynamoDBException error) {
-            LOGGER.error(error.getMessage(), error);
+            event = OBJECT_MAPPER.readTree(input);
+        } catch (IOException error) {
+            throw new IllegalArgumentException("Invalid JSON: " + error.getMessage());
         }
 
-        LOGGER.info("{} movie infos uploaded successfully", result);
+        if (isNodeNullOrEmpty(event)) {
+            throw new IllegalArgumentException("Invalid JSON: event is null");
+        }
 
-        return result;
+        final var recordsNode = event.findValue("Records");
+        if (isNodeNullOrEmpty(recordsNode) || !recordsNode.isArray()) {
+            throw new IllegalArgumentException("Invalid JSON: Records node is null or not an array");
+        }
+
+        final var objectKeys = new ArrayList<String>();
+
+        for (final var recordNode : recordsNode) {
+
+            final var s3Node = recordNode.findValue("s3");
+            if (isNodeNullOrEmpty(s3Node)) {
+                throw new IllegalArgumentException("Invalid JSON: Missing Record.s3 node");
+            }
+
+            final var bucketNode = s3Node.findValue("bucket");
+            if (isNodeNullOrEmpty(bucketNode)) {
+                throw new IllegalArgumentException("Invalid JSON: Missing Record.s3.bucket node");
+            }
+
+            final var bucketNameNode = bucketNode.findValue("name");
+            if (isNodeNullOrEmpty(bucketNode)) {
+                throw new IllegalArgumentException("Invalid JSON: Missing Record.s3.bucket.name node");
+            }
+
+            final var bucketName = Optional.of(bucketNameNode).map(JsonNode::asText).orElse(null);
+            if (isNullOrEmpty(bucketName)) {
+                throw new IllegalArgumentException("Invalid JSON: Record.s3.bucket.name node is null");
+            }
+
+            if (!bucketName.equalsIgnoreCase(movieInfosBucket)) {
+                continue;
+            }
+
+            final var objectNode = s3Node.findValue("object");
+            if (isNodeNullOrEmpty(objectNode)) {
+                throw new IllegalArgumentException("Invalid JSON: Missing Record.s3.object node");
+            }
+
+            final var objectKeyNode = objectNode.findValue("key");
+            if (isNodeNullOrEmpty(objectKeyNode)) {
+                throw new IllegalArgumentException("Invalid JSON: Missing Record.s3.object.key node");
+            }
+
+            final var objectKey = Optional.of(objectKeyNode).map(JsonNode::asText).orElse(null);
+            if (isNullOrEmpty(objectKey)) {
+                throw new IllegalArgumentException("Invalid JSON: Record.s3.object.key node is null");
+            }
+
+            objectKeys.add(objectKey);
+        }
+
+        return objectKeys;
+    }
+
+    @Override
+    public Logger getLogger() {
+        return LOGGER;
+    }
+
+    @Override
+    public ObjectMapper getObjectMapper() {
+        return OBJECT_MAPPER;
     }
 }

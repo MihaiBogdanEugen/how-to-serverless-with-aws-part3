@@ -6,7 +6,12 @@ ext {
     awsXrayJavaSdkVersion = "2.4.0"
     gradleVersion = "6.2.1"
     jacksonVersion = "2.10.2"
+    junitVersion = "5.6.0"
+    mockitoVersion = "2.7.22"
+    mockitoJunitVersion = "3.3.0"
     log4jVersion = "2.13.0"
+    slf4jVersion = "1.7.30"
+    testContainersVersion = "1.12.5"
 }
 
 subprojects {
@@ -45,6 +50,17 @@ configure(subprojects) {
         implementation "com.amazonaws:aws-xray-recorder-sdk-aws-sdk"
 
         implementation platform("com.amazonaws:aws-java-sdk-bom:$awsJavaSdkVersion")
+
+        testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
+        testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+        testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+        testImplementation "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+        testImplementation "org.mockito:mockito-core:$mockitoVersion"
+        testImplementation "org.mockito:mockito-junit-jupiter:$mockitoJunitVersion"
+        testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
+        testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
+
+        testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
     }
 
     task buildZip(type: Zip) {
@@ -57,6 +73,13 @@ configure(subprojects) {
     }
 
     build.dependsOn buildZip
+
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events "passed", "skipped", "failed"
+        }
+    }
 }
 
 wrapper {

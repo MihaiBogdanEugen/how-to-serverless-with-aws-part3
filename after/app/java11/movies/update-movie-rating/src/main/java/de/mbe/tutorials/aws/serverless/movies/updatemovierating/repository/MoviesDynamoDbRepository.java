@@ -7,7 +7,7 @@ import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.model
 
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
-public final class MoviesDynamoDbRepository {
+public class MoviesDynamoDbRepository {
 
     private final DynamoDBMapper dynamoDBMapper;
     private final DynamoDBMapperConfig writeMovieRatingConfig;

@@ -3,32 +3,30 @@ package de.mbe.tutorials.aws.serverless.movies.getmovie;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.handlers.TracingHandler;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import de.mbe.tutorials.aws.serverless.movies.getmovie.repository.MoviesDynamoDbRepository;
-import de.mbe.tutorials.aws.serverless.movies.getmovie.utils.APIGatewayV2ProxyResponseUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Optional;
+
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
-public final class FnGetMovie implements RequestHandler<APIGatewayV2ProxyRequestEvent, APIGatewayV2ProxyResponseEvent>, APIGatewayV2ProxyResponseUtils {
+public final class FnGetMovie implements RequestStreamHandler, APIGatewayProxyResponseUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(FnGetMovie.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private final ObjectMapper objectMapper;
     private final MoviesDynamoDbRepository moviesDynamoDbRepository;
 
     public FnGetMovie() {
-
-        objectMapper = new ObjectMapper();
-        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
-
         final var amazonDynamoDB = AmazonDynamoDBClientBuilder
                 .standard()
                 .withRequestHandlers(new TracingHandler(AWSXRay.getGlobalRecorder()))
@@ -43,32 +41,71 @@ public final class FnGetMovie implements RequestHandler<APIGatewayV2ProxyRequest
                 movieRatingsTable);
     }
 
+    public FnGetMovie(final MoviesDynamoDbRepository moviesDynamoDbRepository) {
+        this.moviesDynamoDbRepository = moviesDynamoDbRepository;
+    }
+
     @Override
-    public APIGatewayV2ProxyResponseEvent handleRequest(APIGatewayV2ProxyRequestEvent request, Context context) {
+    public void handleRequest(final InputStream input, final OutputStream output, final Context context) throws IOException {
 
         LOGGER.info("FnGetMovie.getRemainingTimeInMillis {} ", context.getRemainingTimeInMillis());
 
-        if (!request.getPathParameters().containsKey("movieId") || isNullOrEmpty(request.getPathParameters().get("movieId"))) {
-            return badRequest(LOGGER, "Missing path parameter {movieId}");
-        }
-
-        final var movieId = request.getPathParameters().get("movieId");
-        LOGGER.info("Retrieving movie {}", movieId);
-
         try {
+
+            final var movieId = getId(input);
+            LOGGER.info("Retrieving movie {}", movieId);
 
             final var movie = moviesDynamoDbRepository.getByMovieId(movieId);
             if (movie == null) {
-                return notFound(LOGGER, "Movie " + movieId + " not found");
+                writeNotFound(output, "Movie " + movieId + " not found");
             }
 
-            final var movieAsString = objectMapper.writeValueAsString(movie);
-            return ok(LOGGER, movieAsString);
+            final var movieAsString = OBJECT_MAPPER.writeValueAsString(movie);
+            writeOk(output, movieAsString);
 
+        } catch (IllegalArgumentException error) {
+            writeBadRequest(output, error);
         } catch (AmazonDynamoDBException error) {
-            return amazonDynamoDBException(LOGGER, error);
+            writeAmazonDynamoDBException(output, error);
         } catch (Exception error) {
-            return internalServerError(LOGGER, error);
+            writeInternalServerError(output, error);
         }
+    }
+
+    private String getId(final InputStream input) {
+
+        final JsonNode event;
+
+        try {
+            event = OBJECT_MAPPER.readTree(input);
+        } catch (IOException error) {
+            throw new IllegalArgumentException("Invalid JSON: " + error.getMessage());
+        }
+
+        if (isNodeNullOrEmpty(event)) {
+            throw new IllegalArgumentException("Invalid JSON: event is null");
+        }
+
+        final var pathParameterMapNode = event.findValue("pathParameters");
+        final var id = Optional.ofNullable(pathParameterMapNode)
+                .map(x -> x.get("movieId"))
+                .map(JsonNode::asText)
+                .orElse(null);
+
+        if (isNullOrEmpty(id)) {
+            throw new IllegalArgumentException("Invalid JSON: Missing or null pathParameters.movieId");
+        }
+
+        return id;
+    }
+
+    @Override
+    public Logger getLogger() {
+        return LOGGER;
+    }
+
+    @Override
+    public ObjectMapper getObjectMapper() {
+        return OBJECT_MAPPER;
     }
 }

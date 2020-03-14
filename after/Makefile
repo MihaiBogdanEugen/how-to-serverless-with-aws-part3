@@ -17,8 +17,19 @@ else
 	@(echo "ERROR: Unknown code version")
 endif
 
+## test: Run tests
+test: clean
+ifeq ($(CODE_VERSION), java)
+	@(echo "Using Java11")
+	cd app/java11/movies/ && ./gradlew test
+else ifeq ($(CODE_VERSION), python)
+	@(echo "Using Python3.8")
+else
+	@(echo "ERROR: Unknown code version")
+endif
+
 ## package: Build and package the source code into an uber-zip
-package: clean check-pip3
+package: test check-pip3
 	mkdir -p app/packages/
 ifeq ($(CODE_VERSION), java)	
 	$(call package_java_fn,get-movie)
@@ -106,4 +117,4 @@ define package_python_fn
 	rm -rdf temp/
 endef
 
-.PHONY: help clean package reset-terraform format init validate plan apply destroy output check-pip3 check-terraform check-tf-var-aws-region check-tf-var-aws-account-id
+.PHONY: help clean test package reset-terraform format init validate plan apply destroy output check-pip3 check-terraform check-tf-var-aws-region check-tf-var-aws-account-id
