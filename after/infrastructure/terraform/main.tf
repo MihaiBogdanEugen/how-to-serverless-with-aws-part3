@@ -9,11 +9,17 @@ provider aws {
 
 locals {
   get_movie_lambda_dist_filename           = "../../app/packages/get-movie.zip"
+  update_movie_info_lambda_dist_filename   = "../../app/packages/update-movie-info.zip"
   update_movie_rating_lambda_dist_filename = "../../app/packages/update-movie-rating.zip"
   upload_movie_infos_lambda_dist_filename  = "../../app/packages/upload-movie-infos.zip"
+
   get_movie_lambda_handler = {
     "java" : "de.mbe.tutorials.aws.serverless.movies.getmovie.FnGetMovie::handleRequest",
     "python" : "get-movie/fn_get_movie.handle_request"
+  }
+  update_movie_info_lambda_handler = {
+    "java" : "de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.FnUpdateMovieInfo::handleRequest",
+    "python" : "update-movie-info/fn_update_movie_info.handle_request"
   }
   update_movie_rating_lambda_handler = {
     "java" : "de.mbe.tutorials.aws.serverless.movies.updatemovierating.FnUpdateMovieRating::handleRequest",
@@ -31,16 +37,17 @@ locals {
 
 ############################################################################
 
-module movie_infos_table {
+module movies_table {
   source        = "./modules/dynamo_db"
-  name          = "movie_infos"
-  hash_key_name = "movie_id"
+  name          = "movies"
+  hash_key_name = "movieId"
 }
 
-module movie_ratings_table {
-  source        = "./modules/dynamo_db"
-  name          = "movie_ratings"
-  hash_key_name = "movie_id"
+module movie_infos_table {
+  source         = "./modules/dynamo_db"
+  name           = "movie_infos"
+  hash_key_name  = "movieId"
+  stream_enabled = true
 }
 
 ############################################################################
@@ -63,6 +70,133 @@ data aws_iam_policy_document iam_assume_role_policy {
     }
     actions = [
       "sts:AssumeRole"
+    ]
+  }
+}
+
+data aws_iam_policy_document get_movie_lambda_iam_policy_document {
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "xray:PutTraceSegments",
+      "xray:PutTelemetryRecords",
+      "xray:GetSamplingRules",
+      "xray:GetSamplingTargets",
+      "xray:GetSamplingStatisticSummaries"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:GetItem",
+      "dynamodb:Query",
+      "dynamodb:Scan"
+    ]
+    resources = [
+      module.movies_table.arn
+    ]
+  }
+}
+
+data aws_iam_policy_document update_movie_info_lambda_iam_policy_document {
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "xray:PutTraceSegments",
+      "xray:PutTelemetryRecords",
+      "xray:GetSamplingRules",
+      "xray:GetSamplingTargets",
+      "xray:GetSamplingStatisticSummaries"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:DescribeStream",
+      "dynamodb:GetRecords",
+      "dynamodb:GetShardIterator",
+      "dynamodb:ListStreams"
+    ]
+    resources = [
+      "${module.movies_table.arn}/stream/*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:BatchWriteItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem"
+    ]
+    resources = [
+      module.movies_table.arn
+    ]
+  }
+}
+
+data aws_iam_policy_document update_movie_rating_lambda_iam_policy_document {
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "xray:PutTraceSegments",
+      "xray:PutTelemetryRecords",
+      "xray:GetSamplingRules",
+      "xray:GetSamplingTargets",
+      "xray:GetSamplingStatisticSummaries"
+    ]
+    resources = [
+      "*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "dynamodb:BatchWriteItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem"
+    ]
+    resources = [
+      module.movies_table.arn
     ]
   }
 }
@@ -126,92 +260,22 @@ data aws_iam_policy_document upload_movie_infos_lambda_iam_policy_document {
   }
 }
 
-data aws_iam_policy_document update_movie_rating_lambda_iam_policy_document {
-  statement {
-    effect = "Allow"
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents"
-    ]
-    resources = [
-      "*"
-    ]
-  }
-  statement {
-    effect = "Allow"
-    actions = [
-      "xray:PutTraceSegments",
-      "xray:PutTelemetryRecords",
-      "xray:GetSamplingRules",
-      "xray:GetSamplingTargets",
-      "xray:GetSamplingStatisticSummaries"
-    ]
-    resources = [
-      "*"
-    ]
-  }
-  statement {
-    effect = "Allow"
-    actions = [
-      "dynamodb:BatchWriteItem",
-      "dynamodb:PutItem",
-      "dynamodb:UpdateItem"
-    ]
-    resources = [
-      module.movie_ratings_table.arn
-    ]
-  }
-}
-
-data aws_iam_policy_document get_movie_lambda_iam_policy_document {
-  statement {
-    effect = "Allow"
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents"
-    ]
-    resources = [
-      "*"
-    ]
-  }
-  statement {
-    effect = "Allow"
-    actions = [
-      "xray:PutTraceSegments",
-      "xray:PutTelemetryRecords",
-      "xray:GetSamplingRules",
-      "xray:GetSamplingTargets",
-      "xray:GetSamplingStatisticSummaries"
-    ]
-    resources = [
-      "*"
-    ]
-  }
-  statement {
-    effect = "Allow"
-    actions = [
-      "dynamodb:BatchGetItem",
-      "dynamodb:GetItem",
-      "dynamodb:Query",
-      "dynamodb:Scan"
-    ]
-    resources = [
-      module.movie_infos_table.arn,
-      module.movie_ratings_table.arn
-    ]
-  }
-}
-
 ############################################################################
 
-module upload_movie_infos_lambda_role {
+module get_movie_lambda_role {
   source                  = "./modules/iam/role"
-  role_name               = "upload_movie_infos_lambda_role"
+  role_name               = "get_movie_lambda_role"
   assume_role_policy_json = data.aws_iam_policy_document.iam_assume_role_policy.json
-  policy_name             = "upload_movie_infos_lambda_policy"
-  policy_json             = data.aws_iam_policy_document.upload_movie_infos_lambda_iam_policy_document.json
+  policy_name             = "get_movie_lambda_policy"
+  policy_json             = data.aws_iam_policy_document.get_movie_lambda_iam_policy_document.json
+}
+
+module update_movie_info_lambda_role {
+  source                  = "./modules/iam/role"
+  role_name               = "update_movie_info_lambda_role"
+  assume_role_policy_json = data.aws_iam_policy_document.iam_assume_role_policy.json
+  policy_name             = "update_movie_info_lambda_policy"
+  policy_json             = data.aws_iam_policy_document.update_movie_info_lambda_iam_policy_document.json
 }
 
 module update_movie_rating_lambda_role {
@@ -222,12 +286,12 @@ module update_movie_rating_lambda_role {
   policy_json             = data.aws_iam_policy_document.update_movie_rating_lambda_iam_policy_document.json
 }
 
-module get_movie_lambda_role {
+module upload_movie_infos_lambda_role {
   source                  = "./modules/iam/role"
-  role_name               = "get_movie_lambda_role"
+  role_name               = "upload_movie_infos_lambda_role"
   assume_role_policy_json = data.aws_iam_policy_document.iam_assume_role_policy.json
-  policy_name             = "get_movie_lambda_policy"
-  policy_json             = data.aws_iam_policy_document.get_movie_lambda_iam_policy_document.json
+  policy_name             = "upload_movie_infos_lambda_policy"
+  policy_json             = data.aws_iam_policy_document.upload_movie_infos_lambda_iam_policy_document.json
 }
 
 ############################################################################
@@ -247,6 +311,20 @@ module upload_movie_infos_lambda {
   }
 }
 
+module update_movie_info_lambda {
+  source           = "./modules/lambda"
+  function_name    = "${var.code_version}_fn_update_movie_info"
+  description      = "Update movie info part of a movie in the DynamoDB table"
+  role             = module.update_movie_info_lambda_role.arn
+  runtime          = local.lambda_runtime[var.code_version]
+  handler          = local.update_movie_info_lambda_handler[var.code_version]
+  filename         = local.update_movie_info_lambda_dist_filename
+  source_code_hash = filebase64sha256(local.update_movie_info_lambda_dist_filename)
+  env = {
+    MOVIES_TABLE = module.movies_table.name
+  }
+}
+
 module update_movie_rating_lambda {
   source           = "./modules/lambda"
   function_name    = "${var.code_version}_fn_update_movie_rating"
@@ -257,7 +335,7 @@ module update_movie_rating_lambda {
   filename         = local.update_movie_rating_lambda_dist_filename
   source_code_hash = filebase64sha256(local.update_movie_rating_lambda_dist_filename)
   env = {
-    MOVIE_RATINGS_TABLE = module.movie_ratings_table.name
+    MOVIES_TABLE = module.movies_table.name
   }
 }
 
@@ -271,8 +349,7 @@ module get_movie_lambda {
   filename         = local.get_movie_lambda_dist_filename
   source_code_hash = filebase64sha256(local.get_movie_lambda_dist_filename)
   env = {
-    MOVIE_INFOS_TABLE   = module.movie_infos_table.name
-    MOVIE_RATINGS_TABLE = module.movie_ratings_table.name
+    MOVIES_TABLE = module.movies_table.name
   }
 }
 
@@ -383,6 +460,14 @@ module allow_movies_api_gw_to_invoke_update_movie_rating_lambda {
   method_http_verb    = module.update_movie_rating_request_method.http_method
   depends_on_function = module.update_movie_rating_lambda
   depends_on_api_gw   = module.movies_api_gw
+}
+
+############################################################################
+
+module stream_updates_to_invoke_update_movie_info_lambda {
+  source           = "./modules/lambda_event_source_mapping"
+  event_source_arn = module.movie_infos_table.stream_arn
+  function_name    = module.update_movie_info_lambda.arn
 }
 
 ############################################################################

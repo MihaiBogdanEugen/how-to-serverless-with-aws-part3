@@ -30,3 +30,13 @@ variable hash_key_type {
 variable enable_encryption_at_rest {
   default = false
 }
+
+variable stream_enabled {
+  type    = bool
+  default = false
+}
+
+variable stream_view_type {
+  type    = string
+  default = "NEW_IMAGE"
+}
