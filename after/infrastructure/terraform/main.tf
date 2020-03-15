@@ -53,6 +53,7 @@ module movie_infos_table {
   name           = "movie_infos"
   hash_key_name  = "movieId"
   stream_enabled = true
+  stream_view_type = "NEW_IMAGE"
 }
 
 ############################################################################
@@ -152,7 +153,7 @@ data aws_iam_policy_document update_movie_info_lambda_iam_policy_document {
       "dynamodb:ListStreams"
     ]
     resources = [
-      "${module.movies_table.arn}/stream/*"
+      "${module.movie_infos_table.arn}/stream/*"
     ]
   }
   statement {
@@ -486,9 +487,12 @@ module allow_movies_api_gw_to_invoke_update_movie_rating_lambda {
 ############################################################################
 
 module stream_updates_to_invoke_update_movie_info_lambda {
-  source           = "./modules/lambda_event_source_mapping"
-  event_source_arn = module.movie_infos_table.stream_arn
-  function_name    = module.update_movie_info_lambda.arn
+  source                             = "./modules/lambda_event_source_mapping"
+  event_source_arn                   = module.movie_infos_table.stream_arn
+  function_name                      = module.update_movie_info_lambda.invoke_arn
+  batch_size                         = 25
+  maximum_batching_window_in_seconds = 3
+  starting_position                  = "TRIM_HORIZON"
 }
 
 ############################################################################

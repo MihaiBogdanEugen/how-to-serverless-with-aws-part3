@@ -1,6 +1,5 @@
 variable starting_position {
-  type    = string
-  default = "LATEST"
+  type = string
 }
 
 variable function_name {

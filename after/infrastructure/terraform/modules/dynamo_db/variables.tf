@@ -38,5 +38,5 @@ variable stream_enabled {
 
 variable stream_view_type {
   type    = string
-  default = "NEW_IMAGE"
+  default = ""
 }

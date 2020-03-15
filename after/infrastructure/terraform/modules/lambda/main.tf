@@ -9,6 +9,7 @@ resource aws_lambda_function lambda {
   filename         = var.filename
   source_code_hash = base64sha256(var.source_code_hash)
   publish          = true
+  layers           = [aws_lambda_layer_version.lambda_layer.arn]
 
   environment {
     variables = var.env
