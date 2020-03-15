@@ -33,3 +33,18 @@ resource aws_lambda_alias lambda_alias {
     ]
   }
 }
+
+resource aws_lambda_layer_version lambda_layer {
+  filename            = var.layer_filename
+  description         = "layer for ${var.function_name}"
+  layer_name          = var.layer_name
+  source_code_hash    = base64sha256(var.layer_source_code_hash)
+  compatible_runtimes = [var.runtime]
+  license_info        = "private"
+}
+
+resource aws_lambda_provisioned_concurrency_config provisioned_concurrency {
+  function_name                     = aws_lambda_function.lambda.function_name
+  provisioned_concurrent_executions = var.provisioned_concurrent_executions
+  qualifier                         = aws_lambda_alias.lambda_alias.name
+}

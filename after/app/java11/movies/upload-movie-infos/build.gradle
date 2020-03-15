@@ -82,15 +82,20 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
 }
 
+task buildLayerZip(type: Zip) {
+    into("java/lib") {
+        from configurations.runtimeClasspath
+    }
+    archiveFileName = "${project.name}-layer.zip"
+}
+
 task buildZip(type: Zip) {
     from compileJava
     from processResources
-    into("lib") {
-        from configurations.runtimeClasspath
-    }
     archiveFileName = "${project.name}.zip"
 }
 
+build.dependsOn buildLayerZip
 build.dependsOn buildZip
 
 test {

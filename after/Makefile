@@ -111,7 +111,8 @@ endif
 define package_java_fn
 	cd app/java11/movies/$(1)/ && \
 	./gradlew build && \
-	mv build/distributions/$(1).zip ../../../packages/$(1).zip
+	mv build/distributions/$(1).zip ../../../packages/$(1).zip && \
+	mv build/distributions/$(1)-layer.zip ../../../packages/$(1)-layer.zip
 endef
 
 define clean_java_fn

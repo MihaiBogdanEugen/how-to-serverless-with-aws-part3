@@ -36,11 +36,27 @@ variable role {
   type = string
 }
 
-variable "env" {
+variable env {
   type = map(string)
 }
 
-variable "tracing_config_mode" {
+variable tracing_config_mode {
   type    = string
   default = "Active"
+}
+
+variable layer_name {
+  type = string
+}
+
+variable layer_filename {
+  type = string
+}
+
+variable layer_source_code_hash {
+  type = string
+}
+
+variable provisioned_concurrent_executions {
+  type = number
 }
