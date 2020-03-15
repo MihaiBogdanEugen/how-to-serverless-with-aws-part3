@@ -1,7 +1,8 @@
-package de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository;
+package de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository;
 
-import de.mbe.tutorials.aws.serverless.movies.updatemovierating.TestUtils;
-import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.Movie;
+
+import de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.TestUtils;
+import de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository.models.Movie;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,6 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 import java.net.URI;
 import java.util.AbstractMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @Testcontainers
 public class MoviesDynamoDbRepositoryTests implements TestUtils {
 
-    private static final Random RANDOM = new Random();
     private static final String MOVIES_TABLE = UUID.randomUUID().toString();
 
     private static DynamoDbClient dynamoDbClient;
@@ -72,17 +71,18 @@ public class MoviesDynamoDbRepositoryTests implements TestUtils {
     void testUpdateMovieRating() {
 
         final var movieId = UUID.randomUUID().toString();
-        final var expectedMovieRating = getRandomMovieRating(movieId);
         final var expectedMovie = getRandomMovie(movieId);
+        final var expectedMovieInfo = getRandomMovieInfo(movieId);
 
         dynamoDbClient.putItem(PutItemRequest.builder()
                 .tableName(MOVIES_TABLE)
                 .item(convertToDynamoDBItem(expectedMovie))
                 .build());
 
-        expectedMovieRating.setImdbRating(RANDOM.nextInt(100));
-        expectedMovieRating.setRottenTomatoesRating(RANDOM.nextInt(100));
-        final var actualMovie = moviesDynamoDbRepository.updateMovieRating(expectedMovieRating);
+        expectedMovieInfo.setName(UUID.randomUUID().toString());
+        expectedMovieInfo.setCountryOfOrigin(UUID.randomUUID().toString());
+        expectedMovieInfo.setReleaseDate(UUID.randomUUID().toString());
+        final var actualMovie = moviesDynamoDbRepository.updateMovieInfo(expectedMovieInfo);
 
         assertNotNull(actualMovie);
         assertNotEquals(expectedMovie, actualMovie);

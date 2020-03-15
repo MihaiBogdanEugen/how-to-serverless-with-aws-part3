@@ -2,6 +2,7 @@ package de.mbe.tutorials.aws.serverless.movies.updatemovierating;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.MoviesDynamoDbRepository;
+import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.Movie;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.MovieRating;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,9 +40,10 @@ public final class FnUpdateMovieRatingTests implements TestUtils {
     void correctInputWithExistingIdReturnsOk() throws IOException {
 
         final var movieId = UUID.randomUUID().toString();
+        final var expectedMovie = getRandomMovie(movieId);
         final var expectedMovieRating = getRandomMovieRating(movieId);
 
-        when(moviesDynamoDbRepository.updateMovieRating(expectedMovieRating)).thenReturn(expectedMovieRating);
+        when(moviesDynamoDbRepository.updateMovieRating(expectedMovieRating)).thenReturn(expectedMovie);
 
         final var input = getCorrectInput(expectedMovieRating);
         final var output = new ByteArrayOutputStream();
@@ -63,8 +65,9 @@ public final class FnUpdateMovieRatingTests implements TestUtils {
         assertEquals("application/json", actualResponse.getHeaders().get("Content-Type"));
         assertNotNull(actualResponse.getBody());
 
-        final var actualMovieRating = OBJECT_MAPPER.readValue(actualResponse.getBody(), MovieRating.class);
-        assertEquals(expectedMovieRating, actualMovieRating);
+        final var actualMovie = OBJECT_MAPPER.readValue(actualResponse.getBody(), Movie.class);
+
+        assertEquals(expectedMovie, actualMovie);
     }
 
     @Test

@@ -1,7 +1,7 @@
-package de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository;
+package de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository;
 
-import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.Movie;
-import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.MovieRating;
+import de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository.models.Movie;
+import de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository.models.MovieInfo;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ReturnValue;
@@ -22,22 +22,28 @@ public class MoviesDynamoDbRepository {
         this.moviesTable = moviesTable;
     }
 
-    public Movie updateMovieRating(final MovieRating movieRating) {
+    public Movie updateMovieInfo(final MovieInfo movieInfo) {
 
         final var updateExpressionLines = new ArrayList<String>();
         final var expressionAttributeValues = new HashMap<String, AttributeValue>();
         final var expressionAttributeNames = new HashMap<String, String>();
 
-        Optional.ofNullable(movieRating.getImdbRating()).ifPresent(value -> {
-            updateExpressionLines.add("#i = :imdbRating");
-            expressionAttributeValues.put(":imdbRating", AttributeValue.builder().n(value.toString()).build());
-            expressionAttributeNames.put("#i", "imdbRating");
+        Optional.ofNullable(movieInfo.getName()).ifPresent(value -> {
+            updateExpressionLines.add("#n = :name");
+            expressionAttributeValues.put(":name", AttributeValue.builder().s(value).build());
+            expressionAttributeNames.put("#n", "name");
         });
 
-        Optional.ofNullable(movieRating.getRottenTomatoesRating()).ifPresent(value -> {
-            updateExpressionLines.add("#ro = :rottenTomatoesRating");
-            expressionAttributeValues.put(":rottenTomatoesRating", AttributeValue.builder().n(value.toString()).build());
-            expressionAttributeNames.put("#ro", "rottenTomatoesRating");
+        Optional.ofNullable(movieInfo.getCountryOfOrigin()).ifPresent(value -> {
+            updateExpressionLines.add("#c = :countryOfOrigin");
+            expressionAttributeValues.put(":countryOfOrigin", AttributeValue.builder().s(value).build());
+            expressionAttributeNames.put("#c", "countryOfOrigin");
+        });
+
+        Optional.ofNullable(movieInfo.getReleaseDate()).ifPresent(value -> {
+            updateExpressionLines.add("#r = :releaseDate");
+            expressionAttributeValues.put(":releaseDate", AttributeValue.builder().s(value).build());
+            expressionAttributeNames.put("#r", "releaseDate");
         });
 
         if (updateExpressionLines.isEmpty()) {
@@ -47,7 +53,7 @@ public class MoviesDynamoDbRepository {
         final var updateExpression = "SET " + String.join(", ", updateExpressionLines);
 
         final var updateItemRequest = UpdateItemRequest.builder()
-                .key(Map.of("movieId", AttributeValue.builder().s(movieRating.getMovieId()).build()))
+                .key(Map.of("movieId", AttributeValue.builder().s(movieInfo.getMovieId()).build()))
                 .tableName(moviesTable)
                 .updateExpression(updateExpression)
                 .expressionAttributeValues(expressionAttributeValues)

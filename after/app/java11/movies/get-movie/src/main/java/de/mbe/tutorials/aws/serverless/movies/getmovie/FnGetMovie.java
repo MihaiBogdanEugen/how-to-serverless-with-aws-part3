@@ -28,21 +28,15 @@ public final class FnGetMovie implements RequestStreamHandler, APIGatewayProxyRe
 
     public FnGetMovie() {
 
-        final var tracingConfiguration = ClientOverrideConfiguration.builder()
-                .addExecutionInterceptor(new TracingInterceptor())
-                .build();
-
         final var dynamoDBClient = DynamoDbClient.builder()
-                .overrideConfiguration(tracingConfiguration)
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .addExecutionInterceptor(new TracingInterceptor())
+                        .build())
                 .build();
 
-        final var movieInfosTable = System.getenv("MOVIE_INFOS_TABLE");
-        final var movieRatingsTable = System.getenv("MOVIE_RATINGS_TABLE");
+        final var moviesTable = System.getenv("MOVIES_TABLE");
 
-        moviesDynamoDbRepository = new MoviesDynamoDbRepository(
-                dynamoDBClient,
-                movieInfosTable,
-                movieRatingsTable);
+        moviesDynamoDbRepository = new MoviesDynamoDbRepository(dynamoDBClient, moviesTable);
     }
 
     public FnGetMovie(final MoviesDynamoDbRepository moviesDynamoDbRepository) {

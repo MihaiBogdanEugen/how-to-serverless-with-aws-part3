@@ -11,6 +11,7 @@ clean:
 ifeq ($(CODE_VERSION), java)
 	@(echo "Using Java11")
 	$(call clean_java_fn,get-movie)
+	$(call clean_java_fn,update-movie-info)
 	$(call clean_java_fn,update-movie-rating)
 	$(call clean_java_fn,upload-movie-infos)
 else ifeq ($(CODE_VERSION), python)
@@ -24,6 +25,7 @@ test: clean
 ifeq ($(CODE_VERSION), java)
 	@(echo "Using Java11")
 	$(call test_java_fn,get-movie)
+	$(call test_java_fn,update-movie-info)
 	$(call test_java_fn,update-movie-rating)
 	$(call test_java_fn,upload-movie-infos)
 else ifeq ($(CODE_VERSION), python)
@@ -35,8 +37,9 @@ endif
 ## package: Build and package the source code into an uber-zip
 package: test check-pip3
 	mkdir -p app/packages/
-ifeq ($(CODE_VERSION), java)	
+ifeq ($(CODE_VERSION), java)
 	$(call package_java_fn,get-movie)
+	$(call package_java_fn,update-movie-info)
 	$(call package_java_fn,update-movie-rating)
 	$(call package_java_fn,upload-movie-infos)
 else ifeq ($(CODE_VERSION), python)

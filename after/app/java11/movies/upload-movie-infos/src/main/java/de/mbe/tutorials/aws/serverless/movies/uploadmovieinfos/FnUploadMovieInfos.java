@@ -34,16 +34,16 @@ public final class FnUploadMovieInfos implements RequestStreamHandler, APIGatewa
 
     public FnUploadMovieInfos() {
 
-        final var tracingConfiguration = ClientOverrideConfiguration.builder()
-                .addExecutionInterceptor(new TracingInterceptor())
-                .build();
-
         final var dynamoDbClient = DynamoDbClient.builder()
-                .overrideConfiguration(tracingConfiguration)
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .addExecutionInterceptor(new TracingInterceptor())
+                        .build())
                 .build();
 
         final var s3Client = S3Client.builder()
-                .overrideConfiguration(tracingConfiguration)
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .addExecutionInterceptor(new TracingInterceptor())
+                        .build())
                 .build();
 
         movieInfosBucket = System.getenv("MOVIE_INFOS_BUCKET");

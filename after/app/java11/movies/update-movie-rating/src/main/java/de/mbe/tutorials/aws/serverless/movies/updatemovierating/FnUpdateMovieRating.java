@@ -30,17 +30,15 @@ public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatew
 
     public FnUpdateMovieRating() {
 
-        final var tracingConfiguration = ClientOverrideConfiguration.builder()
-                .addExecutionInterceptor(new TracingInterceptor())
-                .build();
-
         final var dynamoDBClient = DynamoDbClient.builder()
-                .overrideConfiguration(tracingConfiguration)
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .addExecutionInterceptor(new TracingInterceptor())
+                        .build())
                 .build();
 
-        final var movieRatingsTable = System.getenv("MOVIE_RATINGS_TABLE");
+        final var moviesTable = System.getenv("MOVIES_TABLE");
 
-        moviesDynamoDbRepository = new MoviesDynamoDbRepository(dynamoDBClient, movieRatingsTable);
+        moviesDynamoDbRepository = new MoviesDynamoDbRepository(dynamoDBClient, moviesTable);
     }
 
     public FnUpdateMovieRating(final MoviesDynamoDbRepository moviesDynamoDbRepository) {
@@ -52,11 +50,11 @@ public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatew
 
         try {
 
-            var movieRating = getMovieRating(input);
+            final var movieRating = getMovieRating(input);
             LOGGER.info("Patching movie {}", movieRating.getMovieId());
 
-            movieRating = moviesDynamoDbRepository.updateMovieRating(movieRating);
-            writeOk(output, OBJECT_MAPPER.writeValueAsString(movieRating));
+            final var movie = moviesDynamoDbRepository.updateMovieRating(movieRating);
+            writeOk(output, OBJECT_MAPPER.writeValueAsString(movie));
 
         } catch (IllegalArgumentException error) {
             writeBadRequest(output, error);
