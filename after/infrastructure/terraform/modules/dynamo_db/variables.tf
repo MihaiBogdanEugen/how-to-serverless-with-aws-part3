@@ -38,5 +38,5 @@ variable stream_enabled {
 
 variable stream_view_type {
   type    = string
-  default = ""
+  default = "NEW_AND_OLD_IMAGES"
 }

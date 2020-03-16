@@ -59,7 +59,7 @@ module movie_infos_table {
 ############################################################################
 
 module movie_infos_bucket {
-  source = "./modules/s3"
+  source = "./modules/s3/bucket"
   name   = "${var.aws_account_id}-movie-infos"
 }
 
@@ -303,7 +303,7 @@ module upload_movie_infos_lambda_role {
 ############################################################################
 
 module upload_movie_infos_lambda {
-  source                            = "./modules/lambda"
+  source                            = "./modules/lambda/function"
   function_name                     = "${var.code_version}_fn_upload_movie_infos"
   description                       = "Read movies from an S3 file and dump them into the DynamoDB table"
   role                              = module.upload_movie_infos_lambda_role.arn
@@ -322,7 +322,7 @@ module upload_movie_infos_lambda {
 }
 
 module update_movie_info_lambda {
-  source                            = "./modules/lambda"
+  source                            = "./modules/lambda/function"
   function_name                     = "${var.code_version}_fn_update_movie_info"
   description                       = "Update movie info part of a movie in the DynamoDB table"
   role                              = module.update_movie_info_lambda_role.arn
@@ -340,7 +340,7 @@ module update_movie_info_lambda {
 }
 
 module update_movie_rating_lambda {
-  source                            = "./modules/lambda"
+  source                            = "./modules/lambda/function"
   function_name                     = "${var.code_version}_fn_update_movie_rating"
   description                       = "Receive a PATCH request from the API GW and save the resource in the DynamoDB table"
   role                              = module.update_movie_rating_lambda_role.arn
@@ -358,7 +358,7 @@ module update_movie_rating_lambda {
 }
 
 module get_movie_lambda {
-  source                            = "./modules/lambda"
+  source                            = "./modules/lambda/function"
   function_name                     = "${var.code_version}_fn_get_movie"
   description                       = "Receive a GET request from the API GW and retreive the resource from the DynamoDB table"
   role                              = module.get_movie_lambda_role.arn
@@ -442,7 +442,7 @@ module movies_api_deployment {
 ############################################################################
 
 module allow_movies_bucket_to_invoke_upload_movie_infos_lambda {
-  source              = "./modules/lambda_permission/allow_execution_from_s3_bucket"
+  source              = "./modules/lambda/permission/allow_execution_from_s3_bucket"
   bucket_arn          = module.movie_infos_bucket.arn
   function_arn        = module.upload_movie_infos_lambda.arn
   depends_on_bucket   = module.movie_infos_bucket
@@ -450,7 +450,7 @@ module allow_movies_bucket_to_invoke_upload_movie_infos_lambda {
 }
 
 module movies_bucket_notification {
-  source              = "./modules/s3_notification/object_created"
+  source              = "./modules/s3/notification/object_created"
   bucket_id           = module.movie_infos_bucket.id
   function_arn        = module.upload_movie_infos_lambda.arn
   file_extension      = "csv"
@@ -461,7 +461,7 @@ module movies_bucket_notification {
 ############################################################################
 
 module allow_movies_api_gw_to_invoke_get_movie_lambda {
-  source              = "./modules/lambda_permission/allow_execution_from_api_gateway"
+  source              = "./modules/lambda/permission/allow_execution_from_api_gateway"
   region              = var.aws_region
   account_id          = var.aws_account_id
   api_gw_id           = module.movies_api_gw.id
@@ -473,7 +473,7 @@ module allow_movies_api_gw_to_invoke_get_movie_lambda {
 }
 
 module allow_movies_api_gw_to_invoke_update_movie_rating_lambda {
-  source              = "./modules/lambda_permission/allow_execution_from_api_gateway"
+  source              = "./modules/lambda/permission/allow_execution_from_api_gateway"
   region              = var.aws_region
   account_id          = var.aws_account_id
   api_gw_id           = module.movies_api_gw.id
@@ -487,9 +487,9 @@ module allow_movies_api_gw_to_invoke_update_movie_rating_lambda {
 ############################################################################
 
 module stream_updates_to_invoke_update_movie_info_lambda {
-  source                             = "./modules/lambda_event_source_mapping"
+  source                             = "./modules/lambda/event_source_mapping"
   event_source_arn                   = module.movie_infos_table.stream_arn
-  function_name                      = module.update_movie_info_lambda.invoke_arn
+  function_name                      = module.update_movie_info_lambda.alias_arn
   batch_size                         = 25
   maximum_batching_window_in_seconds = 3
   starting_position                  = "TRIM_HORIZON"
