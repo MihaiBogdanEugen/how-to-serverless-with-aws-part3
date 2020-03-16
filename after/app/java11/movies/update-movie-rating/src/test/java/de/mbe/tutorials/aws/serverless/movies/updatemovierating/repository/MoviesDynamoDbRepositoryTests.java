@@ -17,8 +17,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
 public class MoviesDynamoDbRepositoryTests implements TestUtils {
@@ -86,6 +85,11 @@ public class MoviesDynamoDbRepositoryTests implements TestUtils {
 
         assertNotNull(actualMovie);
         assertNotEquals(expectedMovie, actualMovie);
+
+        expectedMovie.setImdbRating(expectedMovieRating.getImdbRating());
+        expectedMovie.setRottenTomatoesRating(expectedMovieRating.getRottenTomatoesRating());
+
+        assertEquals(expectedMovie, actualMovie);
     }
 
     private static Map<String, AttributeValue> convertToDynamoDBItem(final Movie movie) {

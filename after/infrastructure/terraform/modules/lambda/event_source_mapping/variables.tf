@@ -1,5 +1,5 @@
 variable starting_position {
-  type = string
+  type    = string
   default = "LATEST"
 }
 
@@ -19,4 +19,12 @@ variable batch_size {
 variable maximum_batching_window_in_seconds {
   type    = number
   default = 5
+}
+
+variable depends_on_function {
+  type = any
+}
+
+variable depends_on_event_source {
+  type = any
 }

@@ -49,10 +49,10 @@ module movies_table {
 }
 
 module movie_infos_table {
-  source         = "./modules/dynamo_db"
-  name           = "movie_infos"
-  hash_key_name  = "movieId"
-  stream_enabled = true
+  source           = "./modules/dynamo_db"
+  name             = "movie_infos"
+  hash_key_name    = "movieId"
+  stream_enabled   = true
   stream_view_type = "NEW_IMAGE"
 }
 
@@ -312,8 +312,8 @@ module upload_movie_infos_lambda {
   filename                          = local.upload_movie_infos_lambda_dist_filename
   source_code_hash                  = filebase64sha256(local.upload_movie_infos_lambda_dist_filename)
   layer_name                        = "${var.code_version}_fn_upload_movie_infos_layer"
-  layer_filename                    = local.upload_movie_infos_lambda_dist_filename
-  layer_source_code_hash            = filebase64sha256(local.upload_movie_infos_lambda_dist_filename)
+  layer_filename                    = local.upload_movie_infos_lambda_layer_dist_filename
+  layer_source_code_hash            = filebase64sha256(local.upload_movie_infos_lambda_layer_dist_filename)
   provisioned_concurrent_executions = local.provisioned_concurrent_executions
   env = {
     MOVIE_INFOS_BUCKET = module.movie_infos_bucket.name
@@ -444,7 +444,7 @@ module movies_api_deployment {
 module allow_movies_bucket_to_invoke_upload_movie_infos_lambda {
   source              = "./modules/lambda/permission/allow_execution_from_s3_bucket"
   bucket_arn          = module.movie_infos_bucket.arn
-  function_arn        = module.upload_movie_infos_lambda.arn
+  function_arn        = module.upload_movie_infos_lambda.alias_arn
   depends_on_bucket   = module.movie_infos_bucket
   depends_on_function = module.upload_movie_infos_lambda
 }
@@ -452,7 +452,7 @@ module allow_movies_bucket_to_invoke_upload_movie_infos_lambda {
 module movies_bucket_notification {
   source              = "./modules/s3/notification/object_created"
   bucket_id           = module.movie_infos_bucket.id
-  function_arn        = module.upload_movie_infos_lambda.arn
+  function_arn        = module.upload_movie_infos_lambda.alias_arn
   file_extension      = "csv"
   depends_on_function = module.upload_movie_infos_lambda
   depends_on_bucket   = module.movie_infos_bucket
@@ -466,7 +466,7 @@ module allow_movies_api_gw_to_invoke_get_movie_lambda {
   account_id          = var.aws_account_id
   api_gw_id           = module.movies_api_gw.id
   resource_path       = module.movie_resource.path
-  function_arn        = module.get_movie_lambda.arn
+  function_arn        = module.get_movie_lambda.alias_arn
   method_http_verb    = module.get_movie_request_method.http_method
   depends_on_function = module.get_movie_lambda
   depends_on_api_gw   = module.movies_api_gw
@@ -478,7 +478,7 @@ module allow_movies_api_gw_to_invoke_update_movie_rating_lambda {
   account_id          = var.aws_account_id
   api_gw_id           = module.movies_api_gw.id
   resource_path       = module.movie_resource.path
-  function_arn        = module.update_movie_rating_lambda.arn
+  function_arn        = module.update_movie_rating_lambda.alias_arn
   method_http_verb    = module.update_movie_rating_request_method.http_method
   depends_on_function = module.update_movie_rating_lambda
   depends_on_api_gw   = module.movies_api_gw
@@ -493,6 +493,8 @@ module stream_updates_to_invoke_update_movie_info_lambda {
   batch_size                         = 25
   maximum_batching_window_in_seconds = 3
   starting_position                  = "TRIM_HORIZON"
+  depends_on_function                = module.update_movie_info_lambda
+  depends_on_event_source            = module.movie_infos_table
 }
 
 ############################################################################

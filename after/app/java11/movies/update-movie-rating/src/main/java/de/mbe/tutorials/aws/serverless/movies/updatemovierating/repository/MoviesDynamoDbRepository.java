@@ -64,7 +64,7 @@ public class MoviesDynamoDbRepository {
 
         final var movie = new Movie();
 
-        Optional.ofNullable(attributes.getOrDefault("id", null))
+        Optional.ofNullable(attributes.getOrDefault("movieId", null))
                 .ifPresent(attribute -> movie.setMovieId(attribute.s()));
 
         Optional.ofNullable(attributes.getOrDefault("name", null))
