@@ -1,42 +1,75 @@
-terraform {
-  required_version = "0.12.23"
-}
-
-provider aws {
-  region  = var.aws_region
-  version = "2.52.0"
-}
-
 locals {
-  provisioned_concurrent_executions              = 3
-  get_movie_lambda_dist_filename                 = "../../app/packages/get-movie.zip"
-  get_movie_lambda_layer_dist_filename           = "../../app/packages/get-movie-layer.zip"
-  update_movie_info_lambda_dist_filename         = "../../app/packages/update-movie-info.zip"
-  update_movie_info_lambda_layer_dist_filename   = "../../app/packages/update-movie-info-layer.zip"
-  update_movie_rating_lambda_dist_filename       = "../../app/packages/update-movie-rating.zip"
-  update_movie_rating_lambda_layer_dist_filename = "../../app/packages/update-movie-rating-layer.zip"
-  upload_movie_infos_lambda_dist_filename        = "../../app/packages/upload-movie-infos.zip"
-  upload_movie_infos_lambda_layer_dist_filename  = "../../app/packages/upload-movie-infos-layer.zip"
 
-  get_movie_lambda_handler = {
-    "java" : "de.mbe.tutorials.aws.serverless.movies.getmovie.FnGetMovie::handleRequest",
-    "python" : "get-movie/fn_get_movie.handle_request"
+  movies_table_name       = "${var.aws_account_id}-movies-table"
+  movie_infos_table_name  = "${var.aws_account_id}-movie-infos-table"
+  movie_infos_bucket_name = "${var.aws_account_id}-movie-infos-bucket"
+
+  get_movie_lambda_config = {
+    java : {
+      handler : "de.mbe.tutorials.aws.serverless.movies.getmovie.FnGetMovie::handleRequest"
+      runtime : "java11"
+    }
+    python : {
+      handler : "get-movie/fn_get_movie.handle_request"
+      runtime : "python3.8"
+    }
+    filename : "../../app/packages/${var.code_version}-get-movie.zip"
+    layer_filename : "../../app/packages/${var.code_version}-get-movie-layer.zip"
+    function_name : "${var.code_version}-get-movie"
+    layer_name : "${var.code_version}-get-movie-layer"
+    provisioned_concurrent_executions : 1
+    memory_size : 3008
   }
-  update_movie_info_lambda_handler = {
-    "java" : "de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.FnUpdateMovieInfo::handleRequest",
-    "python" : "update-movie-info/fn_update_movie_info.handle_request"
+
+  update_movie_info_lambda_config = {
+    java : {
+      handler : "de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.FnUpdateMovieInfo::handleRequest"
+      runtime : "java11"
+    }
+    python : {
+      handler : "update-movie-info/fn_update_movie_info.handle_request"
+      runtime : "python3.8"
+    }
+    filename : "../../app/packages/${var.code_version}-update-movie-info.zip"
+    layer_filename : "../../app/packages/${var.code_version}-update-movie-info-layer.zip"
+    function_name : "${var.code_version}-update-movie-info"
+    layer_name : "${var.code_version}-update-movie-info-layer"
+    provisioned_concurrent_executions : 1
+    memory_size : 3008
   }
-  update_movie_rating_lambda_handler = {
-    "java" : "de.mbe.tutorials.aws.serverless.movies.updatemovierating.FnUpdateMovieRating::handleRequest",
-    "python" : "update-movie-rating/fn_update_movie_rating.handle_request"
+
+  update_movie_rating_lambda_config = {
+    java : {
+      handler : "de.mbe.tutorials.aws.serverless.movies.updatemovierating.FnUpdateMovieRating::handleRequest"
+      runtime : "java11"
+    }
+    python : {
+      handler : "update-movie-rating/fn_update_movie_rating.handle_request"
+      runtime : "python3.8"
+    }
+    filename : "../../app/packages/${var.code_version}-update-movie-rating.zip"
+    layer_filename : "../../app/packages/${var.code_version}-update-movie-rating-layer.zip"
+    function_name : "${var.code_version}-update-movie-rating"
+    layer_name : "${var.code_version}-update-movie-rating-layer"
+    provisioned_concurrent_executions : 1
+    memory_size : 3008
   }
-  upload_movie_infos_lambda_handler = {
-    "java" : "de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.FnUploadMovieInfos::handleRequest",
-    "python" : "upload-movie-infos/fn_upload_movie_infos.handle_request"
-  }
-  lambda_runtime = {
-    "java" : "java11",
-    "python" : "python3.8"
+
+  upload_movie_infos_lambda_config = {
+    java : {
+      handler : "de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.FnUploadMovieInfos::handleRequest"
+      runtime : "java11"
+    }
+    python : {
+      handler : "upload-movie-infos/fn_upload_movie_infos.handle_request"
+      runtime : "python3.8"
+    }
+    filename : "../../app/packages/${var.code_version}-upload-movie-infos.zip"
+    layer_filename : "../../app/packages/${var.code_version}-upload-movie-infos-layer.zip"
+    function_name : "${var.code_version}-upload-movie-infos"
+    layer_name : "${var.code_version}-upload-movie-infos-layer"
+    provisioned_concurrent_executions : 1
+    memory_size : 3008
   }
 }
 
@@ -44,13 +77,15 @@ locals {
 
 module movies_table {
   source        = "./modules/dynamo_db"
-  name          = "movies"
+  name          = local.movies_table_name
   hash_key_name = "movieId"
+  stream_enabled = false
+  stream_view_type = ""
 }
 
 module movie_infos_table {
   source           = "./modules/dynamo_db"
-  name             = "movie_infos"
+  name             = local.movie_infos_table_name
   hash_key_name    = "movieId"
   stream_enabled   = true
   stream_view_type = "NEW_IMAGE"
@@ -60,7 +95,7 @@ module movie_infos_table {
 
 module movie_infos_bucket {
   source = "./modules/s3/bucket"
-  name   = "${var.aws_account_id}-movie-infos"
+  name   = local.movie_infos_bucket_name
 }
 
 ############################################################################
@@ -302,38 +337,35 @@ module upload_movie_infos_lambda_role {
 
 ############################################################################
 
-module upload_movie_infos_lambda {
+module get_movie_lambda {
   source                            = "./modules/lambda/function"
-  function_name                     = "${var.code_version}_fn_upload_movie_infos"
-  description                       = "Read movies from an S3 file and dump them into the DynamoDB table"
-  role                              = module.upload_movie_infos_lambda_role.arn
-  runtime                           = local.lambda_runtime[var.code_version]
-  handler                           = local.upload_movie_infos_lambda_handler[var.code_version]
-  filename                          = local.upload_movie_infos_lambda_dist_filename
-  source_code_hash                  = filebase64sha256(local.upload_movie_infos_lambda_dist_filename)
-  layer_name                        = "${var.code_version}_fn_upload_movie_infos_layer"
-  layer_filename                    = local.upload_movie_infos_lambda_layer_dist_filename
-  layer_source_code_hash            = filebase64sha256(local.upload_movie_infos_lambda_layer_dist_filename)
-  provisioned_concurrent_executions = local.provisioned_concurrent_executions
+  function_name                     = local.get_movie_lambda_config.function_name
+  description                       = "Receive a GET request from the API GW and retreive the resource from the DynamoDB table"
+  role                              = module.get_movie_lambda_role.arn
+  runtime                           = local.get_movie_lambda_config[var.code_version]["runtime"]
+  handler                           = local.get_movie_lambda_config[var.code_version]["handler"]
+  filename                          = local.get_movie_lambda_config.filename
+  layer_name                        = local.get_movie_lambda_config.layer_name
+  layer_filename                    = local.get_movie_lambda_config.layer_filename
+  provisioned_concurrent_executions = local.get_movie_lambda_config.provisioned_concurrent_executions
+  memory_size                       = local.get_movie_lambda_config.memory_size
   env = {
-    MOVIE_INFOS_BUCKET = module.movie_infos_bucket.name
-    MOVIE_INFOS_TABLE  = module.movie_infos_table.name
+    MOVIES_TABLE = module.movies_table.name
   }
 }
 
 module update_movie_info_lambda {
   source                            = "./modules/lambda/function"
-  function_name                     = "${var.code_version}_fn_update_movie_info"
+  function_name                     = local.update_movie_info_lambda_config.function_name
   description                       = "Update movie info part of a movie in the DynamoDB table"
   role                              = module.update_movie_info_lambda_role.arn
-  runtime                           = local.lambda_runtime[var.code_version]
-  handler                           = local.update_movie_info_lambda_handler[var.code_version]
-  filename                          = local.update_movie_info_lambda_dist_filename
-  source_code_hash                  = filebase64sha256(local.update_movie_info_lambda_dist_filename)
-  layer_name                        = "${var.code_version}_fn_update_movie_info_layer"
-  layer_filename                    = local.update_movie_info_lambda_layer_dist_filename
-  layer_source_code_hash            = filebase64sha256(local.update_movie_info_lambda_layer_dist_filename)
-  provisioned_concurrent_executions = local.provisioned_concurrent_executions
+  runtime                           = local.update_movie_info_lambda_config[var.code_version]["runtime"]
+  handler                           = local.update_movie_info_lambda_config[var.code_version]["handler"]
+  filename                          = local.update_movie_info_lambda_config.filename
+  layer_name                        = local.update_movie_info_lambda_config.layer_name
+  layer_filename                    = local.update_movie_info_lambda_config.layer_filename
+  provisioned_concurrent_executions = local.update_movie_info_lambda_config.provisioned_concurrent_executions
+  memory_size                       = local.update_movie_info_lambda_config.memory_size
   env = {
     MOVIES_TABLE = module.movies_table.name
   }
@@ -341,37 +373,36 @@ module update_movie_info_lambda {
 
 module update_movie_rating_lambda {
   source                            = "./modules/lambda/function"
-  function_name                     = "${var.code_version}_fn_update_movie_rating"
+  function_name                     = local.update_movie_rating_lambda_config.function_name
   description                       = "Receive a PATCH request from the API GW and save the resource in the DynamoDB table"
   role                              = module.update_movie_rating_lambda_role.arn
-  runtime                           = local.lambda_runtime[var.code_version]
-  handler                           = local.update_movie_rating_lambda_handler[var.code_version]
-  filename                          = local.update_movie_rating_lambda_dist_filename
-  source_code_hash                  = filebase64sha256(local.update_movie_rating_lambda_dist_filename)
-  layer_name                        = "${var.code_version}_fn_update_movie_rating_layer"
-  layer_filename                    = local.update_movie_rating_lambda_layer_dist_filename
-  layer_source_code_hash            = filebase64sha256(local.update_movie_rating_lambda_layer_dist_filename)
-  provisioned_concurrent_executions = local.provisioned_concurrent_executions
+  runtime                           = local.update_movie_rating_lambda_config[var.code_version]["runtime"]
+  handler                           = local.update_movie_rating_lambda_config[var.code_version]["handler"]
+  filename                          = local.update_movie_rating_lambda_config.filename
+  layer_name                        = local.update_movie_rating_lambda_config.layer_name
+  layer_filename                    = local.update_movie_rating_lambda_config.layer_filename
+  provisioned_concurrent_executions = local.update_movie_rating_lambda_config.provisioned_concurrent_executions
+  memory_size                       = local.update_movie_rating_lambda_config.memory_size
   env = {
     MOVIES_TABLE = module.movies_table.name
   }
 }
 
-module get_movie_lambda {
+module upload_movie_infos_lambda {
   source                            = "./modules/lambda/function"
-  function_name                     = "${var.code_version}_fn_get_movie"
-  description                       = "Receive a GET request from the API GW and retreive the resource from the DynamoDB table"
-  role                              = module.get_movie_lambda_role.arn
-  runtime                           = local.lambda_runtime[var.code_version]
-  handler                           = local.get_movie_lambda_handler[var.code_version]
-  filename                          = local.get_movie_lambda_dist_filename
-  source_code_hash                  = filebase64sha256(local.get_movie_lambda_dist_filename)
-  layer_name                        = "${var.code_version}_fn_get_movie_layer"
-  layer_filename                    = local.get_movie_lambda_layer_dist_filename
-  layer_source_code_hash            = filebase64sha256(local.get_movie_lambda_layer_dist_filename)
-  provisioned_concurrent_executions = local.provisioned_concurrent_executions
+  function_name                     = local.upload_movie_infos_lambda_config.function_name
+  description                       = "Read movies from an S3 file and dump them into the DynamoDB table"
+  role                              = module.upload_movie_infos_lambda_role.arn
+  runtime                           = local.upload_movie_infos_lambda_config[var.code_version]["runtime"]
+  handler                           = local.upload_movie_infos_lambda_config[var.code_version]["handler"]
+  filename                          = local.upload_movie_infos_lambda_config.filename
+  layer_name                        = local.upload_movie_infos_lambda_config.layer_name
+  layer_filename                    = local.upload_movie_infos_lambda_config.layer_filename
+  provisioned_concurrent_executions = local.upload_movie_infos_lambda_config.provisioned_concurrent_executions
+  memory_size                       = local.upload_movie_infos_lambda_config.memory_size
   env = {
-    MOVIES_TABLE = module.movies_table.name
+    MOVIE_INFOS_BUCKET = module.movie_infos_bucket.name
+    MOVIE_INFOS_TABLE  = module.movie_infos_table.name
   }
 }
 
@@ -444,7 +475,7 @@ module movies_api_deployment {
 module allow_movies_bucket_to_invoke_upload_movie_infos_lambda {
   source              = "./modules/lambda/permission/allow_execution_from_s3_bucket"
   bucket_arn          = module.movie_infos_bucket.arn
-  function_arn        = module.upload_movie_infos_lambda.alias_arn
+  function_arn        = module.upload_movie_infos_lambda.arn
   depends_on_bucket   = module.movie_infos_bucket
   depends_on_function = module.upload_movie_infos_lambda
 }
@@ -466,7 +497,7 @@ module allow_movies_api_gw_to_invoke_get_movie_lambda {
   account_id          = var.aws_account_id
   api_gw_id           = module.movies_api_gw.id
   resource_path       = module.movie_resource.path
-  function_arn        = module.get_movie_lambda.alias_arn
+  function_arn        = module.get_movie_lambda.arn
   method_http_verb    = module.get_movie_request_method.http_method
   depends_on_function = module.get_movie_lambda
   depends_on_api_gw   = module.movies_api_gw
@@ -478,7 +509,7 @@ module allow_movies_api_gw_to_invoke_update_movie_rating_lambda {
   account_id          = var.aws_account_id
   api_gw_id           = module.movies_api_gw.id
   resource_path       = module.movie_resource.path
-  function_arn        = module.update_movie_rating_lambda.alias_arn
+  function_arn        = module.update_movie_rating_lambda.arn
   method_http_verb    = module.update_movie_rating_request_method.http_method
   depends_on_function = module.update_movie_rating_lambda
   depends_on_api_gw   = module.movies_api_gw
