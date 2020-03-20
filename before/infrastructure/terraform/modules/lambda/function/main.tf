@@ -7,7 +7,7 @@ resource aws_lambda_function lambda {
   timeout          = var.timeout
   handler          = var.handler
   filename         = var.filename
-  source_code_hash = base64sha256(var.source_code_hash)
+  source_code_hash = filebase64sha256(var.filename)
   publish          = true
 
   environment {
