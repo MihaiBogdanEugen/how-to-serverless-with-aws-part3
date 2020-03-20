@@ -17,3 +17,7 @@ output invoke_arn {
 output alias_arn {
   value = aws_lambda_alias.lambda_alias.arn
 }
+
+output alias_name {
+  value = aws_lambda_alias.lambda_alias.name
+}

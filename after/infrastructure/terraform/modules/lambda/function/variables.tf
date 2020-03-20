@@ -52,3 +52,8 @@ variable layer_filename {
 variable provisioned_concurrent_executions {
   type = number
 }
+
+variable alias_name {
+  type    = string
+  default = "live"
+}

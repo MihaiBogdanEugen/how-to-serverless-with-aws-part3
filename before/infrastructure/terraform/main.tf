@@ -346,6 +346,7 @@ module allow_movies_bucket_to_invoke_upload_movie_infos_lambda {
   source              = "./modules/lambda/permission/allow_execution_from_s3_bucket"
   bucket_arn          = module.movie_infos_bucket.arn
   function_arn        = module.upload_movie_infos_lambda.arn
+  function_alias      = module.upload_movie_infos_lambda.alias_name
   depends_on_bucket   = module.movie_infos_bucket
   depends_on_function = module.upload_movie_infos_lambda
 }
@@ -368,6 +369,7 @@ module allow_movies_api_gw_to_invoke_get_movie_lambda {
   api_gw_id           = module.movies_api_gw.id
   resource_path       = module.movie_resource.path
   function_arn        = module.get_movie_lambda.arn
+  function_alias      = module.get_movie_lambda.alias_name
   method_http_verb    = module.get_movie_request_method.http_method
   depends_on_function = module.get_movie_lambda
   depends_on_api_gw   = module.movies_api_gw
@@ -380,6 +382,7 @@ module allow_movies_api_gw_to_invoke_update_movie_rating_lambda {
   api_gw_id           = module.movies_api_gw.id
   resource_path       = module.movie_resource.path
   function_arn        = module.update_movie_rating_lambda.arn
+  function_alias      = module.update_movie_rating_lambda.alias_name
   method_http_verb    = module.update_movie_rating_request_method.http_method
   depends_on_function = module.update_movie_rating_lambda
   depends_on_api_gw   = module.movies_api_gw

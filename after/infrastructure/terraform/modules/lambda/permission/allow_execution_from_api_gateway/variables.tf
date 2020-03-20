@@ -2,6 +2,10 @@ variable function_arn {
   type = string
 }
 
+variable function_alias {
+  type = string
+}
+
 variable region {
   type = string
 }

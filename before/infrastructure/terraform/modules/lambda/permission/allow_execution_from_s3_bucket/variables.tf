@@ -13,3 +13,7 @@ variable depends_on_function {
 variable depends_on_bucket {
   type = any
 }
+
+variable function_alias {
+  type = string
+}

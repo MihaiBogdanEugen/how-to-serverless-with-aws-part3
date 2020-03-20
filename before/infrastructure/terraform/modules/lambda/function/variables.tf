@@ -36,11 +36,16 @@ variable role {
   type = string
 }
 
-variable "env" {
+variable env {
   type = map(string)
 }
 
-variable "tracing_config_mode" {
+variable tracing_config_mode {
   type    = string
   default = "Active"
+}
+
+variable alias_name {
+  type    = string
+  default = "live"
 }

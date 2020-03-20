@@ -30,3 +30,7 @@ variable depends_on_function {
 variable depends_on_api_gw {
   type = any
 }
+
+variable function_alias {
+  type = string
+}
