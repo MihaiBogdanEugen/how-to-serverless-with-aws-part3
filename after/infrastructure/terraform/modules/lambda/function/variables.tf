@@ -6,10 +6,6 @@ variable filename {
   type = string
 }
 
-variable source_code_hash {
-  type = string
-}
-
 variable function_name {
   type = string
 }
@@ -50,10 +46,6 @@ variable layer_name {
 }
 
 variable layer_filename {
-  type = string
-}
-
-variable layer_source_code_hash {
   type = string
 }
 

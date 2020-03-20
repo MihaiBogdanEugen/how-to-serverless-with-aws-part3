@@ -7,7 +7,7 @@ resource aws_lambda_function lambda {
   timeout          = var.timeout
   handler          = var.handler
   filename         = var.filename
-  source_code_hash = base64sha256(var.source_code_hash)
+  source_code_hash = filebase64sha256(var.filename)
   publish          = true
   layers           = [aws_lambda_layer_version.lambda_layer.arn]
 
@@ -39,7 +39,7 @@ resource aws_lambda_layer_version lambda_layer {
   filename            = var.layer_filename
   description         = "layer for ${var.function_name}"
   layer_name          = var.layer_name
-  source_code_hash    = base64sha256(var.layer_source_code_hash)
+  source_code_hash    = filebase64sha256(var.layer_filename)
   compatible_runtimes = [var.runtime]
   license_info        = "private"
 }
