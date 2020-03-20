@@ -68,13 +68,13 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
+    implementation "org.slf4j:slf4j-simple:$slf4jVersion"
     implementation "software.amazon.awssdk:dynamodb"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
     testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
-    testImplementation "org.slf4j:slf4j-simple:$slf4jVersion"
     testImplementation "org.testcontainers:junit-jupiter:$testContainersVersion"
     testImplementation "org.testcontainers:testcontainers:$testContainersVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
@@ -84,13 +84,13 @@ task buildLayerZip(type: Zip) {
     into("java/lib") {
         from configurations.runtimeClasspath
     }
-    archiveFileName = "${project.name}-layer.zip"
+    archiveFileName = "java-${project.name}-layer.zip"
 }
 
 task buildZip(type: Zip) {
     from compileJava
     from processResources
-    archiveFileName = "${project.name}.zip"
+    archiveFileName = "java-${project.name}.zip"
 }
 
 build.dependsOn buildLayerZip
