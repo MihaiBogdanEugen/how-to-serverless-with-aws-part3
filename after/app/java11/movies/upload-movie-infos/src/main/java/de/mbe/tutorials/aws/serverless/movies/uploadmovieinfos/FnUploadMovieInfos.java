@@ -1,7 +1,5 @@
 package de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
 import de.mbe.tutorials.aws.serverless.movies.uploadmovieinfos.repository.MoviesDynamoDbRepository;
@@ -17,7 +15,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public final class FnUploadMovieInfos implements RequestHandler<S3Event, Boolean> {
+public final class FnUploadMovieInfos {
 
     private static final Logger LOGGER = LogManager.getLogger(FnUploadMovieInfos.class);
 
@@ -51,8 +49,7 @@ public final class FnUploadMovieInfos implements RequestHandler<S3Event, Boolean
         this.uploadFromS3ToDynamoDBService = uploadFromS3ToDynamoDBService;
     }
 
-    @Override
-    public Boolean handleRequest(final S3Event input, final Context context) {
+    public Boolean handleRequest(final S3Event input) {
 
         try {
 

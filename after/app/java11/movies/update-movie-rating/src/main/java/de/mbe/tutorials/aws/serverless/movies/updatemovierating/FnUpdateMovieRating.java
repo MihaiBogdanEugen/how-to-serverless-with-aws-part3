@@ -1,13 +1,9 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovierating;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.updatemovierating.repository.models.MovieRating;
@@ -17,15 +13,11 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
-public final class FnUpdateMovieRating implements RequestHandler<APIGatewayV2ProxyRequestEvent, APIGatewayV2ProxyResponseEvent> {
+public final class FnUpdateMovieRating {
 
     private static final Logger LOGGER = LogManager.getLogger(FnUpdateMovieRating.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -49,8 +41,7 @@ public final class FnUpdateMovieRating implements RequestHandler<APIGatewayV2Pro
         this.moviesDynamoDbRepository = moviesDynamoDbRepository;
     }
 
-    @Override
-    public APIGatewayV2ProxyResponseEvent handleRequest(final APIGatewayV2ProxyRequestEvent input, final Context context) {
+    public APIGatewayV2ProxyResponseEvent handleRequest(final APIGatewayV2ProxyRequestEvent input) {
 
         try {
 

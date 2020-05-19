@@ -5,7 +5,6 @@ plugins {
 
 ext {
     awsJavaSdkVersion = "2.13.18"
-    awsLambdaJavaCoreVersion = "1.2.1"
     awsLambdaJavaEventsVersion = "3.0.0"
     awsLambdaJavaLog4j2Version = "1.2.0"
     awsXrayJavaSdkVersion = "2.5.0"
@@ -64,7 +63,6 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation "com.amazonaws:aws-lambda-java-core:$awsLambdaJavaCoreVersion"
     implementation "com.amazonaws:aws-lambda-java-events:$awsLambdaJavaEventsVersion"
     implementation "com.amazonaws:aws-lambda-java-log4j2:$awsLambdaJavaLog4j2Version"
     implementation "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2"

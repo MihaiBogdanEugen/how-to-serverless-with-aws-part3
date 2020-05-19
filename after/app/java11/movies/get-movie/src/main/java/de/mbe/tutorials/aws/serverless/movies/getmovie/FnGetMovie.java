@@ -1,7 +1,5 @@
 package de.mbe.tutorials.aws.serverless.movies.getmovie;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
@@ -18,7 +16,7 @@ import java.util.Map;
 
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
-public final class FnGetMovie implements RequestHandler<APIGatewayV2ProxyRequestEvent, APIGatewayV2ProxyResponseEvent> {
+public final class FnGetMovie {
 
     private static final Logger LOGGER = LogManager.getLogger(FnGetMovie.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -42,8 +40,7 @@ public final class FnGetMovie implements RequestHandler<APIGatewayV2ProxyRequest
         this.moviesDynamoDbRepository = moviesDynamoDbRepository;
     }
 
-    @Override
-    public APIGatewayV2ProxyResponseEvent handleRequest(final APIGatewayV2ProxyRequestEvent input, final Context context) {
+    public APIGatewayV2ProxyResponseEvent handleRequest(final APIGatewayV2ProxyRequestEvent input) {
 
         try {
 

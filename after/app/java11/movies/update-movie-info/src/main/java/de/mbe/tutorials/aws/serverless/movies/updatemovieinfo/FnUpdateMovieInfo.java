@@ -1,7 +1,5 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovieinfo;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
 import de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository.MoviesDynamoDbRepository;
@@ -17,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class FnUpdateMovieInfo implements RequestHandler<DynamodbEvent, Boolean> {
+public class FnUpdateMovieInfo {
 
     private static final Logger LOGGER = LogManager.getLogger(FnUpdateMovieInfo.class);
 
@@ -40,8 +38,7 @@ public class FnUpdateMovieInfo implements RequestHandler<DynamodbEvent, Boolean>
         this.moviesDynamoDbRepository = moviesDynamoDbRepository;
     }
 
-    @Override
-    public Boolean handleRequest(final DynamodbEvent input, final Context context) {
+    public Boolean handleRequest(final DynamodbEvent input) {
 
         try {
 
