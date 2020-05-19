@@ -14,8 +14,6 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 import java.util.Map;
 
-import static com.amazonaws.util.StringUtils.isNullOrEmpty;
-
 public final class FnGetMovie {
 
     private static final Logger LOGGER = LogManager.getLogger(FnGetMovie.class);
@@ -66,7 +64,7 @@ public final class FnGetMovie {
     private static String getMovieId(final APIGatewayV2ProxyRequestEvent input) {
 
         final var movieId = input.getPathParameters().getOrDefault("movieId", null);
-        if (isNullOrEmpty(movieId)) {
+        if (movieId == null) {
             throw new IllegalArgumentException("Invalid JSON: Missing or null pathParameters.movieId");
         }
         return movieId;
