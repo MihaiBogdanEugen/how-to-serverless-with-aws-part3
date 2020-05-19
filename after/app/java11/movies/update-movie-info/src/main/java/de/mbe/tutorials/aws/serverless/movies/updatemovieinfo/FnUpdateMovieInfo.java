@@ -1,10 +1,9 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovieinfo;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository.MoviesDynamoDbRepository;
 import de.mbe.tutorials.aws.serverless.movies.updatemovieinfo.repository.models.MovieInfo;
 import org.apache.logging.log4j.LogManager;
@@ -13,19 +12,14 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import static com.amazonaws.util.StringUtils.isNullOrEmpty;
-
-public class FnUpdateMovieInfo implements RequestStreamHandler, APIGatewayProxyResponseUtils {
+public class FnUpdateMovieInfo implements RequestHandler<DynamodbEvent, Boolean> {
 
     private static final Logger LOGGER = LogManager.getLogger(FnUpdateMovieInfo.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final MoviesDynamoDbRepository moviesDynamoDbRepository;
 
@@ -47,7 +41,7 @@ public class FnUpdateMovieInfo implements RequestStreamHandler, APIGatewayProxyR
     }
 
     @Override
-    public void handleRequest(InputStream input, OutputStream output, Context context) throws IOException {
+    public Boolean handleRequest(final DynamodbEvent input, final Context context) {
 
         try {
 
@@ -58,119 +52,40 @@ public class FnUpdateMovieInfo implements RequestStreamHandler, APIGatewayProxyR
                 moviesDynamoDbRepository.updateMovieInfo(movieInfo);
             }
 
-            writeOk(output, Integer.toString(movieInfos.size()));
+            return reply(200, movieInfos.size());
 
         } catch (IllegalArgumentException error) {
-            writeBadRequest(output, error);
+            return reply(400, error);
         } catch (DynamoDbException error) {
-            writeDynamoDbException(output, error);
+            return reply(error.statusCode(), error);
         } catch (Exception error) {
-            writeInternalServerError(output, error);
+            return reply(500, error);
         }
     }
 
-    private List<MovieInfo> getMovieInfos(final InputStream input) {
+    private static List<MovieInfo> getMovieInfos(final DynamodbEvent input) {
+
+        final var newImages = input.getRecords().stream()
+                .filter(x -> x.getDynamodb().getNewImage() != null && !x.getDynamodb().getNewImage().isEmpty())
+                .map(x -> x.getDynamodb().getNewImage())
+                .collect(Collectors.toList());
 
         final var movieInfos = new ArrayList<MovieInfo>();
 
-        final JsonNode event;
-
-        try {
-            event = OBJECT_MAPPER.readTree(input);
-        } catch (IOException error) {
-            throw new IllegalArgumentException("Invalid JSON: " + error.getMessage());
-        }
-
-        if (isNodeNullOrEmpty(event)) {
-            throw new IllegalArgumentException("Invalid JSON: event is null");
-        }
-
-        final var recordsNode = event.findValue("Records");
-        if (isNodeNullOrEmpty(recordsNode) || !recordsNode.isArray()) {
-            throw new IllegalArgumentException("Invalid JSON: Records node is null or not an array");
-        }
-
-        for (final var recordNode : recordsNode) {
-
-            final var dynamodbNode = recordNode.findValue("dynamodb");
-            if (isNodeNullOrEmpty(dynamodbNode)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb node");
-            }
-
-            final var newImageNode = dynamodbNode.findValue("NewImage");
-            if (isNodeNullOrEmpty(newImageNode)) {
-                continue;
-            }
+        for (final var newImage : newImages) {
 
             final var movieInfo = new MovieInfo();
+            Optional.of(newImage.getOrDefault("movieId", null))
+                    .ifPresent(x -> movieInfo.setMovieId(x.getS()));
 
-            final var movieIdNode = newImageNode.findValue("movieId");
-            if (isNodeNullOrEmpty(movieIdNode)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.movieId node");
-            }
+            Optional.of(newImage.getOrDefault("name", null))
+                    .ifPresent(x -> movieInfo.setName(x.getS()));
 
-            final var movieIdNodeValue = movieIdNode.findValue("S");
-            if (isNodeNullOrEmpty(movieIdNodeValue)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.movieId.S node");
-            }
+            Optional.of(newImage.getOrDefault("countryOfOrigin", null))
+                    .ifPresent(x -> movieInfo.setCountryOfOrigin(x.getS()));
 
-            final var movieId = Optional.of(movieIdNodeValue).map(JsonNode::asText).orElse(null);
-            if (isNullOrEmpty(movieId)) {
-                throw new IllegalArgumentException("Invalid JSON: Record.dynamodb.NewImage.movieId.S node is null");
-            }
-
-            movieInfo.setMovieId(movieId);
-
-            final var nameNode = newImageNode.findValue("name");
-            if (isNodeNullOrEmpty(nameNode)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.name node");
-            }
-
-            final var nameNodeValue = nameNode.findValue("S");
-            if (isNodeNullOrEmpty(nameNodeValue)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.name.S node");
-            }
-
-            final var name = Optional.of(nameNodeValue).map(JsonNode::asText).orElse(null);
-            if (isNullOrEmpty(name)) {
-                throw new IllegalArgumentException("Invalid JSON: Record.dynamodb.NewImage.name.S node is null");
-            }
-
-            movieInfo.setName(name);
-
-            final var countryOfOriginNode = newImageNode.findValue("countryOfOrigin");
-            if (isNodeNullOrEmpty(countryOfOriginNode)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.countryOfOrigin node");
-            }
-
-            final var countryOfOriginNodeValue = countryOfOriginNode.findValue("S");
-            if (isNodeNullOrEmpty(countryOfOriginNodeValue)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.countryOfOrigin.S node");
-            }
-
-            final var countryOfOrigin = Optional.of(countryOfOriginNodeValue).map(JsonNode::asText).orElse(null);
-            if (isNullOrEmpty(countryOfOrigin)) {
-                throw new IllegalArgumentException("Invalid JSON: Record.dynamodb.NewImage.countryOfOrigin.S node is null");
-            }
-
-            movieInfo.setCountryOfOrigin(countryOfOrigin);
-
-            final var releaseDateNode = newImageNode.findValue("releaseDate");
-            if (isNodeNullOrEmpty(releaseDateNode)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.releaseDate node");
-            }
-
-            final var releaseDateNodeValue = releaseDateNode.findValue("S");
-            if (isNodeNullOrEmpty(releaseDateNodeValue)) {
-                throw new IllegalArgumentException("Invalid JSON: Missing Record.dynamodb.NewImage.releaseDate.S node");
-            }
-
-            final var releaseDate = Optional.of(releaseDateNodeValue).map(JsonNode::asText).orElse(null);
-            if (isNullOrEmpty(releaseDate)) {
-                throw new IllegalArgumentException("Invalid JSON: Record.dynamodb.NewImage.releaseDate.S node is null");
-            }
-
-            movieInfo.setReleaseDate(releaseDate);
+            Optional.of(newImage.getOrDefault("releaseDate", null))
+                    .ifPresent(x -> movieInfo.setReleaseDate(x.getS()));
 
             movieInfos.add(movieInfo);
         }
@@ -178,13 +93,20 @@ public class FnUpdateMovieInfo implements RequestStreamHandler, APIGatewayProxyR
         return movieInfos;
     }
 
-    @Override
-    public Logger getLogger() {
-        return LOGGER;
-    }
+    private static <T> Boolean reply(final int statusCode, final T body) {
 
-    @Override
-    public ObjectMapper getObjectMapper() {
-        return OBJECT_MAPPER;
+        var response = false;
+        switch (statusCode / 100) {
+            case 2:
+                LOGGER.info("SUCCESS! statusCode: {}, message: {}", statusCode, body);
+                response = true;
+                break;
+            case 4:
+                LOGGER.warn("CLIENT ERROR! statusCode: {}, message: {}", statusCode, body);
+                break;
+            default:
+                LOGGER.error("SERVER ERROR! statusCode: {}, message: {}", statusCode, body);
+        }
+        return response;
     }
 }

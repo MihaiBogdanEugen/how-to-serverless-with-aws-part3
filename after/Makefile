@@ -54,7 +54,8 @@ endif
 reset-terraform:
 	rm -rfd infrastructure/terraform/.terraform/ && \
 	rm -f infrastructure/terraform/terraform.tfstate && \
-	rm -f infrastructure/terraform/terraform.tfstate.backup
+	rm -f infrastructure/terraform/terraform.tfstate.backup && \
+	rm -f infrastructure/terraform/plan.tfplan
 
 ## format: Rewrites Terraform config files to canonical format
 format: check-terraform
@@ -70,7 +71,7 @@ validate: check-terraform
 
 ## plan: Generate and show a Terraform execution plan
 plan: check-terraform
-	cd infrastructure/terraform && terraform plan -var 'code_version=$(CODE_VERSION)'
+	cd infrastructure/terraform && terraform plan -var 'code_version=$(CODE_VERSION)' -out=plan.tfplan
 
 ## apply: Build or change Terraform infrastructure
 apply: check-tf-var-aws-region check-tf-var-aws-account-id check-terraform

@@ -4,16 +4,18 @@ plugins {
 }
 
 ext {
-    awsJavaSdkVersion = "2.10.86"
-    awsLambdaJavaCoreVersion = "1.2.0"
-    awsLambdaJavaLog4j2Version = "1.1.0"
-    awsXrayJavaSdkVersion = "2.4.0"
+    awsJavaSdkVersion = "2.13.18"
+    awsLambdaJavaCoreVersion = "1.2.1"
+    awsLambdaJavaEventsVersion = "3.0.0"
+    awsLambdaJavaLog4j2Version = "1.2.0"
+    awsXrayJavaSdkVersion = "2.5.0"
     commonsLoggingVersion = "1.2"
-    gradleVersion = "6.2.1"
+    gradleWrapperVersion = "6.4"
     httpclientVersion = "4.5.9"
-    jacksonVersion = "2.10.3"
+    jacksonVersion = "2.10.4"
+    jodaTimeVerison = "2.8.1"
     junitVersion = "5.6.0"
-    log4jVersion = "2.13.1"
+    log4jVersion = "2.13.2"
     mockitoVersion = "3.3.0"
     nettyVersion = "4.1.47.Final"
     reactiveStreamsVersion = "1.0.3"
@@ -43,8 +45,6 @@ dependencyManagement {
         mavenBom "software.amazon.awssdk:bom:$awsJavaSdkVersion"
     }
     dependencies {
-        dependency "com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion"
-        dependency "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
         dependency "commons-logging:commons-logging:$commonsLoggingVersion"
         dependency "io.netty:netty-buffer:$nettyVersion"
         dependency "io.netty:netty-codec-http:$nettyVersion"
@@ -52,6 +52,9 @@ dependencyManagement {
         dependency "io.netty:netty-common:$nettyVersion"
         dependency "io.netty:netty-handler:$nettyVersion"
         dependency "io.netty:netty-transport:$nettyVersion"
+        dependency "com.fasterxml.jackson.core:jackson-core:$jacksonVersion"
+        dependency "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+        dependency "joda-time:joda-time:$jodaTimeVerison"
         dependency "org.apache.httpcomponents:httpclient:$httpclientVersion"
         dependency "org.apache.logging.log4j:log4j-api:$log4jVersion"
         dependency "org.apache.logging.log4j:log4j-core:$log4jVersion"
@@ -62,10 +65,10 @@ dependencyManagement {
 
 dependencies {
     implementation "com.amazonaws:aws-lambda-java-core:$awsLambdaJavaCoreVersion"
+    implementation "com.amazonaws:aws-lambda-java-events:$awsLambdaJavaEventsVersion"
     implementation "com.amazonaws:aws-lambda-java-log4j2:$awsLambdaJavaLog4j2Version"
     implementation "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2"
     implementation "com.amazonaws:aws-xray-recorder-sdk-core"
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "org.apache.logging.log4j:log4j-api:$log4jVersion"
     implementation "org.apache.logging.log4j:log4j-core:$log4jVersion"
     implementation "org.slf4j:slf4j-simple:$slf4jVersion"
@@ -104,7 +107,7 @@ test {
 }
 
 wrapper {
-    gradleVersion = "${gradleVersion}"
+    gradleVersion = "$gradleWrapperVersion"
     distributionType = Wrapper.DistributionType.ALL
 }
 

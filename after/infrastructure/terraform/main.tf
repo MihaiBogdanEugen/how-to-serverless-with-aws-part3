@@ -17,8 +17,8 @@ locals {
     layer_filename : "../../app/packages/${var.code_version}-get-movie-layer.zip"
     function_name : "${var.code_version}-get-movie"
     layer_name : "${var.code_version}-get-movie-layer"
-    provisioned_concurrent_executions : 1
-    memory_size : 3008
+    provisioned_concurrent_executions : 3
+    memory_size : 1792
   }
 
   update_movie_info_lambda_config = {
@@ -34,8 +34,8 @@ locals {
     layer_filename : "../../app/packages/${var.code_version}-update-movie-info-layer.zip"
     function_name : "${var.code_version}-update-movie-info"
     layer_name : "${var.code_version}-update-movie-info-layer"
-    provisioned_concurrent_executions : 1
-    memory_size : 3008
+    provisioned_concurrent_executions : 3
+    memory_size : 1792
   }
 
   update_movie_rating_lambda_config = {
@@ -51,8 +51,8 @@ locals {
     layer_filename : "../../app/packages/${var.code_version}-update-movie-rating-layer.zip"
     function_name : "${var.code_version}-update-movie-rating"
     layer_name : "${var.code_version}-update-movie-rating-layer"
-    provisioned_concurrent_executions : 1
-    memory_size : 3008
+    provisioned_concurrent_executions : 3
+    memory_size : 1792
   }
 
   upload_movie_infos_lambda_config = {
@@ -68,8 +68,8 @@ locals {
     layer_filename : "../../app/packages/${var.code_version}-upload-movie-infos-layer.zip"
     function_name : "${var.code_version}-upload-movie-infos"
     layer_name : "${var.code_version}-upload-movie-infos-layer"
-    provisioned_concurrent_executions : 1
-    memory_size : 3008
+    provisioned_concurrent_executions : 3
+    memory_size : 1792
   }
 }
 

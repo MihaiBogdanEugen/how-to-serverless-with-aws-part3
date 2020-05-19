@@ -1,7 +1,10 @@
 package de.mbe.tutorials.aws.serverless.movies.updatemovierating;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2ProxyResponseEvent;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,11 +20,12 @@ import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.amazonaws.util.StringUtils.isNullOrEmpty;
 
-public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatewayProxyResponseUtils {
+public final class FnUpdateMovieRating implements RequestHandler<APIGatewayV2ProxyRequestEvent, APIGatewayV2ProxyResponseEvent> {
 
     private static final Logger LOGGER = LogManager.getLogger(FnUpdateMovieRating.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -46,7 +50,7 @@ public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatew
     }
 
     @Override
-    public void handleRequest(final InputStream input, final OutputStream output, final Context context) throws IOException {
+    public APIGatewayV2ProxyResponseEvent handleRequest(final APIGatewayV2ProxyRequestEvent input, final Context context) {
 
         try {
 
@@ -54,62 +58,54 @@ public final class FnUpdateMovieRating implements RequestStreamHandler, APIGatew
             LOGGER.info("Patching movie {}", movieRating.getMovieId());
 
             final var movie = moviesDynamoDbRepository.updateMovieRating(movieRating);
-            writeOk(output, OBJECT_MAPPER.writeValueAsString(movie));
+            return reply(200, movie);
 
         } catch (IllegalArgumentException error) {
-            writeBadRequest(output, error);
+            return reply(400, error);
         } catch (DynamoDbException error) {
-            writeDynamoDbException(output, error);
+            return reply(error.statusCode(), error);
         } catch (Exception error) {
-            writeInternalServerError(output, error);
+            return reply(500, error);
         }
     }
 
-    private MovieRating getMovieRating(final InputStream input) throws JsonProcessingException {
+    private static MovieRating getMovieRating(final APIGatewayV2ProxyRequestEvent input) throws JsonProcessingException {
 
-        final JsonNode event;
-
-        try {
-            event = OBJECT_MAPPER.readTree(input);
-        } catch (IOException error) {
-            throw new IllegalArgumentException("Invalid JSON: " + error.getMessage());
-        }
-
-        if (isNodeNullOrEmpty(event)) {
-            throw new IllegalArgumentException("Invalid JSON: event is null");
-        }
-
-        final var pathParameterMapNode = event.findValue("pathParameters");
-        final var movieId = Optional.ofNullable(pathParameterMapNode)
-                .map(x -> x.get("movieId"))
-                .map(JsonNode::asText)
-                .orElse(null);
-
+        final var movieId = input.getPathParameters().getOrDefault("movieId", null);
         if (isNullOrEmpty(movieId)) {
             throw new IllegalArgumentException("Invalid JSON: Missing or null pathParameters.movieId");
         }
 
-        final var bodyMapNode = event.findValue("body");
-        final var body = Optional.ofNullable(bodyMapNode)
-                .map(JsonNode::asText)
-                .orElse(null);
-
-        if (isNullOrEmpty(body)) {
-            throw new IllegalArgumentException("Invalid JSON: Missing or null body");
-        }
-
-        final var movieRating = OBJECT_MAPPER.readValue(body, MovieRating.class);
+        final var movieRating = OBJECT_MAPPER.readValue(input.getBody(), MovieRating.class);
         movieRating.setMovieId(movieId);
         return movieRating;
     }
 
-    @Override
-    public Logger getLogger() {
-        return LOGGER;
-    }
+    private static <T> APIGatewayV2ProxyResponseEvent reply(final int statusCode, final T body) {
 
-    @Override
-    public ObjectMapper getObjectMapper() {
-        return OBJECT_MAPPER;
+        switch (statusCode / 100) {
+            case 2:
+                LOGGER.info("SUCCESS! statusCode: {}, message: {}", statusCode, body);
+                break;
+            case 4:
+                LOGGER.warn("CLIENT ERROR! statusCode: {}, message: {}", statusCode, body);
+                break;
+            default:
+                LOGGER.error("SERVER ERROR! statusCode: {}, message: {}", statusCode, body);
+        }
+
+        String bodyAsString;
+        try {
+            bodyAsString = OBJECT_MAPPER.writeValueAsString(body);
+        } catch (JsonProcessingException e) {
+            bodyAsString = e.getMessage();
+        }
+
+        final var response = new APIGatewayV2ProxyResponseEvent();
+        response.setHeaders(Map.of("Content-Type", "application/json"));
+        response.setIsBase64Encoded(false);
+        response.setBody(bodyAsString);
+        response.setStatusCode(200);
+        return response;
     }
 }
