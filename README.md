@@ -13,7 +13,7 @@
 - access to the Amazon Console GUI
 - [Amazon Corretto 11](https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/what-is-corretto-11.html)
 - [Python 3.8.x](https://www.python.org/) 
-- [Terraform 0.12.23](https://www.terraform.io/)
+- [Terraform 0.12.25](https://www.terraform.io/)
 
 ## Introduction
 
